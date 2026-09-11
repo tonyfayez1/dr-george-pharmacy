@@ -8,6 +8,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Firebase Realtime Database SDK (Official CDN) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
   <!-- Google Fonts: Cairo -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1123,8 +1127,8 @@
         </div>
 
         <div class="bg-brand-50 border-b border-brand-100 p-3 text-xs text-brand-900 flex items-center justify-between">
-          <span class="font-bold"><i class="fa-solid fa-truck-fast text-brand-600 ml-1"></i> الخدمة توصيل سريعة لطلبك</span>
-          <span class="text-brand-700 bg-brand-100 px-2 py-0.5 rounded font-black text-[11px]">0.00 ج.م</span>
+          <span class="font-bold"><i class="fa-solid fa-truck-fast text-brand-600 ml-1"></i> رسوم التوصيل المحددة لطلبك:</span>
+          <span id="cartDeliveryFeeBanner" class="text-brand-700 bg-brand-100 px-2 py-0.5 rounded font-black text-[11px]">20.00 ج.م</span>
         </div>
 
         <div id="cartItemsList" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar"></div>
@@ -1235,24 +1239,24 @@
             </div>
           </div>
 
-          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
-            <div class="flex justify-between">
-              <span>إجمالي الأصناف:</span>
-              <span id="checkoutSubtotal" class="font-bold text-slate-800 text-xs">0.00 ج.م</span>
+          <div class="p-4 bg-slate-100 rounded-2xl border border-slate-300 text-xs space-y-2 mt-4">
+            <div class="flex justify-between text-slate-600 font-semibold">
+              <span>إجمالي قيمة الأصناف:</span>
+              <span id="checkoutSubtotal" class="font-bold text-slate-900 text-xs">0.00 ج.م</span>
             </div>
-            <div class="flex justify-between">
-              <span>رسوم التوصيل:</span>
-              <span id="checkoutDeliveryFee" class="font-bold text-brand-600">20.00 ج.م</span>
+            <div class="flex justify-between text-slate-600 font-semibold">
+              <span>رسوم التوصيل (المحددة من الصيدلية):</span>
+              <span id="checkoutDeliveryFee" class="font-black text-brand-700">0.00 ج.م</span>
             </div>
-            <div class="flex justify-between font-black text-slate-900 text-xs pt-1 border-t border-slate-200">
-              <span>المبلغ الإجمالي للدفع:</span>
-              <span id="checkoutOrderTotal" class="text-brand-700 text-sm">0.00 ج.م</span>
+            <div class="flex justify-between items-baseline text-sm font-black text-slate-900 pt-2.5 border-t border-slate-300">
+              <span>المبلغ الإجمالي النهائي المطلوب دفعه:</span>
+              <span id="checkoutOrderTotal" class="text-brand-800 text-base font-black">0.00 ج.م</span>
             </div>
           </div>
 
           <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-black py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
             <i class="fa-solid fa-check"></i>
-            <span>تأكيد الطلب والتوصيل المجاني</span>
+            <span>تأكيد وإرسال الطلب</span>
           </button>
         </form>
 
@@ -1703,44 +1707,113 @@
 
     
     // --- Central Cloud Sync Engine (الربط السحابي المركزي للطلبات والروشتات) ---
+    
+    // =========================================================================
+    // GOOGLE FIREBASE OFFICIAL CONFIGURATION & REALTIME DATABASE ENGINE
+    // =========================================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyBCYGnKRMRBHi8pwWZeifnn9oyTwrWnXh0",
+      authDomain: "dr-george-pharmacy.firebaseapp.com",
+      projectId: "dr-george-pharmacy",
+      storageBucket: "dr-george-pharmacy.firebasestorage.app",
+      messagingSenderId: "101747916662",
+      appId: "1:101747916662:web:77f6b12df99142aeb34457",
+      databaseURL: "https://dr-george-pharmacy-fd4ae-default-rtdb.firebaseio.com"
+    };
+
+    let fbApp = null;
+    let fbDb = null;
+    try {
+      if (typeof firebase !== 'undefined' && firebase.initializeApp) {
+        fbApp = firebase.initializeApp(firebaseConfig);
+        fbDb = firebase.database();
+        console.log("Firebase Realtime Cloud Database Connected for dr-george-pharmacy!");
+      }
+    } catch (e) {
+      console.warn("Firebase Init Notice:", e);
+    }
+
     const CloudSync = {
-      endpoint: 'https://dr-george-pharmacy-default-rtdb.firebaseio.com',
+      endpoint: 'https://dr-george-pharmacy-fd4ae-default-rtdb.firebaseio.com',
 
       getEndpoint() {
         return localStorage.getItem('dr_george_cloud_endpoint') || this.endpoint;
       },
       setEndpoint(url) {
-        localStorage.setItem('dr_george_cloud_endpoint', url);
+        if (url) localStorage.setItem('dr_george_cloud_endpoint', url.trim());
       },
 
+      // --- 1. Delivery Fee Cloud Sync ---
+      async syncDeliveryFee(fee) {
+        const numFee = Number(fee) || 0;
+        try {
+          if (fbDb) {
+            fbDb.ref('settings/deliveryFee').set(numFee);
+          }
+          fetch(`${this.getEndpoint()}/settings/deliveryFee.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(numFee)
+          }).catch(() => {});
+        } catch (err) {}
+      },
+
+      async syncDeliveryFeeFromCloud() {
+        try {
+          if (fbDb) {
+            fbDb.ref('settings/deliveryFee').once('value').then(snap => {
+              const val = snap.val();
+              if (val !== null && !isNaN(val)) {
+                localStorage.setItem('dr_george_delivery_fee', parseFloat(val).toFixed(2));
+                updateCartUI();
+              }
+            });
+            return;
+          }
+          const res = await fetch(`${this.getEndpoint()}/settings/deliveryFee.json`);
+          if (res.ok) {
+            const val = await res.json();
+            if (val !== null && !isNaN(val)) {
+              localStorage.setItem('dr_george_delivery_fee', parseFloat(val).toFixed(2));
+              updateCartUI();
+            }
+          }
+        } catch (err) {}
+      },
+
+      // --- 2. Orders Cloud Sync ---
       async syncOrder(order) {
         try {
-          const url = `${this.getEndpoint()}/orders/${order.id}.json`;
-          fetch(url, {
+          if (fbDb) {
+            fbDb.ref('orders/' + order.id).set(order);
+          }
+          fetch(`${this.getEndpoint()}/orders/${order.id}.json`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(order)
           }).catch(() => {});
-        } catch (err) {
-          console.warn('Cloud sync offline fallback');
-        }
-      },
-
-      async syncPrescription(rx) {
-        try {
-          const url = `${this.getEndpoint()}/prescriptions/${rx.id}.json`;
-          fetch(url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(rx)
-          }).catch(() => {});
-        } catch (err) {
-          console.warn('Cloud sync offline fallback');
-        }
+        } catch (err) {}
       },
 
       async syncOrdersFromCloud() {
         try {
+          if (fbDb) {
+            fbDb.ref('orders').once('value').then(snap => {
+              const data = snap.val();
+              if (data && typeof data === 'object') {
+                const cloudList = Object.values(data);
+                const localList = PharmacyDB.getOrders();
+                const map = new Map();
+                localList.forEach(o => map.set(o.id, o));
+                cloudList.forEach(o => map.set(o.id, o));
+                const merged = Array.from(map.values()).sort((a, b) => (b.date > a.date ? -1 : 1));
+                localStorage.setItem('dr_george_orders', JSON.stringify(merged));
+                renderAdminKPIs();
+                renderAdminOrders();
+              }
+            });
+            return;
+          }
           const res = await fetch(`${this.getEndpoint()}/orders.json`);
           if (res.ok) {
             const data = await res.json();
@@ -1756,13 +1829,42 @@
               renderAdminOrders();
             }
           }
-        } catch (err) {
-          // Graceful fallback to local cache
-        }
+        } catch (err) {}
+      },
+
+      // --- 3. Prescriptions Cloud Sync ---
+      async syncPrescription(rx) {
+        try {
+          if (fbDb) {
+            fbDb.ref('prescriptions/' + rx.id).set(rx);
+          }
+          fetch(`${this.getEndpoint()}/prescriptions/${rx.id}.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(rx)
+          }).catch(() => {});
+        } catch (err) {}
       },
 
       async syncPrescriptionsFromCloud() {
         try {
+          if (fbDb) {
+            fbDb.ref('prescriptions').once('value').then(snap => {
+              const data = snap.val();
+              if (data && typeof data === 'object') {
+                const cloudList = Object.values(data);
+                const localList = PharmacyDB.getPrescriptions();
+                const map = new Map();
+                localList.forEach(r => map.set(r.id, r));
+                cloudList.forEach(r => map.set(r.id, r));
+                const merged = Array.from(map.values()).sort((a, b) => (b.date > a.date ? -1 : 1));
+                localStorage.setItem('dr_george_prescriptions', JSON.stringify(merged));
+                renderAdminKPIs();
+                renderAdminPrescriptions();
+              }
+            });
+            return;
+          }
           const res = await fetch(`${this.getEndpoint()}/prescriptions.json`);
           if (res.ok) {
             const data = await res.json();
@@ -1778,11 +1880,126 @@
               renderAdminPrescriptions();
             }
           }
-        } catch (err) {
-          // Graceful fallback to local cache
+        } catch (err) {}
+      },
+
+      // --- 4. Registered Customers Cloud Sync ---
+      async syncCustomer(customer) {
+        try {
+          if (fbDb) {
+            fbDb.ref('customers/' + customer.id).set(customer);
+          }
+          fetch(`${this.getEndpoint()}/customers/${customer.id}.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(customer)
+          }).catch(() => {});
+        } catch (err) {}
+      },
+
+      async syncCustomersFromCloud() {
+        try {
+          if (fbDb) {
+            fbDb.ref('customers').once('value').then(snap => {
+              const data = snap.val();
+              if (data && typeof data === 'object') {
+                const cloudList = Object.values(data);
+                const localList = PharmacyDB.getCustomers();
+                const map = new Map();
+                localList.forEach(c => map.set(c.id, c));
+                cloudList.forEach(c => map.set(c.id, c));
+                const merged = Array.from(map.values()).sort((a, b) => (b.registeredAt > a.registeredAt ? -1 : 1));
+                localStorage.setItem('dr_george_customers', JSON.stringify(merged));
+                renderAdminCustomers();
+              }
+            });
+            return;
+          }
+          const res = await fetch(`${this.getEndpoint()}/customers.json`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data === 'object') {
+              const cloudList = Object.values(data);
+              const localList = PharmacyDB.getCustomers();
+              const map = new Map();
+              localList.forEach(c => map.set(c.id, c));
+              cloudList.forEach(c => map.set(c.id, c));
+              const merged = Array.from(map.values()).sort((a, b) => (b.registeredAt > a.registeredAt ? -1 : 1));
+              localStorage.setItem('dr_george_customers', JSON.stringify(merged));
+              renderAdminCustomers();
+            }
+          }
+        } catch (err) {}
+      },
+
+      // --- 5. Start Live WebSocket Realtime Listeners ---
+      initRealtimeListeners() {
+        if (!fbDb) return;
+        try {
+          // Listen for new orders live
+          fbDb.ref('orders').on('child_added', (snap) => {
+            const order = snap.val();
+            if (order && order.id) {
+              const orders = PharmacyDB.getOrders();
+              if (!orders.some(o => o.id === order.id)) {
+                orders.unshift(order);
+                localStorage.setItem('dr_george_orders', JSON.stringify(orders));
+                if (PharmacyDB.isAdminAuthenticated()) {
+                  renderAdminKPIs();
+                  renderAdminOrders();
+                  showToast(`🔔 تنبيه فوري: تم استلام طلب جديد (${order.id}) من العميل: ${order.customerName}!`);
+                }
+              }
+            }
+          });
+
+          // Listen for new prescriptions live
+          fbDb.ref('prescriptions').on('child_added', (snap) => {
+            const rx = snap.val();
+            if (rx && rx.id) {
+              const rxs = PharmacyDB.getPrescriptions();
+              if (!rxs.some(r => r.id === rx.id)) {
+                rxs.unshift(rx);
+                localStorage.setItem('dr_george_prescriptions', JSON.stringify(rxs));
+                if (PharmacyDB.isAdminAuthenticated()) {
+                  renderAdminKPIs();
+                  renderAdminPrescriptions();
+                  showToast(`🔔 تنبيه فوري: تم استلام روشتة جديدة (${rx.id}) من المريض: ${rx.patientName}!`);
+                }
+              }
+            }
+          });
+
+          // Listen for new registered customers live
+          fbDb.ref('customers').on('child_added', (snap) => {
+            const cust = snap.val();
+            if (cust && cust.id) {
+              const custs = PharmacyDB.getCustomers();
+              if (!custs.some(c => c.id === cust.id)) {
+                custs.unshift(cust);
+                localStorage.setItem('dr_george_customers', JSON.stringify(custs));
+                if (PharmacyDB.isAdminAuthenticated()) {
+                  renderAdminCustomers();
+                }
+              }
+            }
+          });
+
+          // Listen for delivery fee updates live across all clients
+          fbDb.ref('settings/deliveryFee').on('value', (snap) => {
+            const fee = snap.val();
+            if (fee !== null && !isNaN(fee)) {
+              localStorage.setItem('dr_george_delivery_fee', parseFloat(fee).toFixed(2));
+              updateCartUI();
+            }
+          });
+          console.log("Firebase Realtime Listeners Active!");
+        } catch (e) {
+          console.warn("Realtime listeners error:", e);
         }
       }
     };
+
 
     const PharmacyDB = {
       init() {
@@ -1944,6 +2161,7 @@
         const list = this.getCustomers();
         list.push(user);
         localStorage.setItem('dr_george_customers', JSON.stringify(list));
+        CloudSync.syncCustomer(user);
       },
       getCurrentCustomer() {
         return JSON.parse(sessionStorage.getItem('dr_george_current_customer') || 'null');
@@ -2058,6 +2276,16 @@
         switchView('store');
       }
     }
+    
+    // Realtime Cloud Auto-Sync: Polls for new orders, prescriptions, and customers every 8 seconds
+    setInterval(() => {
+      if (PharmacyDB.isAdminAuthenticated()) {
+        CloudSync.syncOrdersFromCloud();
+        CloudSync.syncPrescriptionsFromCloud();
+        CloudSync.syncCustomersFromCloud();
+      }
+    }, 8000);
+
     window.addEventListener('load', handleRoute);
     window.addEventListener('hashchange', handleRoute);
 
@@ -2865,13 +3093,24 @@
       if (cart.length === 0) return;
       toggleCart();
       const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
-      document.getElementById('checkoutOrderTotal').innerText = `${subtotal.toFixed(2)} ج.م`;
+      const deliveryFee = PharmacyDB.getDeliveryFee();
+      const grandTotal = subtotal + deliveryFee;
+
+      const subElem = document.getElementById('checkoutSubtotal');
+      if (subElem) subElem.innerText = `${subtotal.toFixed(2)} ج.م`;
+
+      const feeElem = document.getElementById('checkoutDeliveryFee');
+      if (feeElem) feeElem.innerText = `${deliveryFee.toFixed(2)} ج.م`;
+
+      const totalElem = document.getElementById('checkoutOrderTotal');
+      if (totalElem) totalElem.innerText = `${grandTotal.toFixed(2)} ج.م`;
 
       // Auto-fill from customer account if logged in
       const cur = PharmacyDB.getCurrentCustomer();
       if (cur) {
         document.getElementById('orderCustomerName').value = cur.name || '';
-        document.getElementById('orderCustomerPhone').value = cur.phone || '';
+        const phone = cur.phone || (cur.contact && !cur.contact.includes('@') ? cur.contact : '');
+        document.getElementById('orderCustomerPhone').value = phone;
         document.getElementById('orderCustomerAddress').value = cur.address || '';
       }
 
@@ -3131,6 +3370,20 @@
       setVal('settingAboutTitle', s.aboutTitle);
       setVal('settingAboutText', s.aboutText);
       setVal('settingDeliveryNotice', s.deliveryNotice);
+      setVal('settingCloudEndpoint', CloudSync.getEndpoint());
+    }
+
+    
+    function handleSaveCloudEndpoint() {
+      const inp = document.getElementById('settingCloudEndpoint');
+      const val = inp ? inp.value.trim() : '';
+      if (val) {
+        CloudSync.setEndpoint(val);
+        showToast("تم تحديث رابط السيرفر السحابي بنجاح!");
+        CloudSync.syncOrdersFromCloud();
+        CloudSync.syncPrescriptionsFromCloud();
+        CloudSync.syncCustomersFromCloud();
+      }
     }
 
     function handleSaveSiteSettingsForm(e) {
@@ -3240,14 +3493,16 @@
       const inp = document.getElementById('adminDeliveryFeeInput');
       const fee = parseFloat(inp ? inp.value : '20') || 0;
       PharmacyDB.setDeliveryFee(fee);
+      CloudSync.syncDeliveryFee(fee);
       updateCartUI();
-      showToast(`تم حفظ وتحديث سعر التوصيل إلى ${fee.toFixed(2)} ج.م بنجاح!`);
+      showToast(`تم حفظ ونشر سعر التوصيل سحابياً إلى ${fee.toFixed(2)} ج.م لجميع العملاء بنجاح!`);
     }
 
     function renderAdminDashboard() {
       applySiteSettings();
       CloudSync.syncOrdersFromCloud();
       CloudSync.syncPrescriptionsFromCloud();
+      CloudSync.syncCustomersFromCloud();
       renderAdminKPIs();
       renderAdminOrders();
       renderAdminPrescriptions();

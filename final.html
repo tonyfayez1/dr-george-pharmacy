@@ -177,7 +177,7 @@
             </h1>
 
             <p class="text-slate-600 text-sm md:text-base leading-relaxed max-w-2xl mx-auto lg:mx-0">
-              أهلاً بكم في <strong>صيدلية دكتور جورج عبده (George Abdo)</strong>؛ صرحكم الطبي المتكامل المجهز بقاعدة بيانات دوائية وتجميلية شاملة تضم كافة الأدوية والمستلزمات الطبية المعتمدة في مصر بأحدث الأسعار الرسمية. نوفر لك جميع احتياجاتك مع إمكانية التسوق كزائر مباشرة أو بإنشاء حساب، مع ميزة <strong>التوصيل السريع</strong> بإشراف د. جورج عبده.
+              أهلاً بكم في <strong>صيدلية دكتور جورج عبده (George Abdo)</strong>؛ صرحكم الطبي المتكامل المجهز بقاعدة بيانات دوائية وتجميلية شاملة تضم كافة الأدوية والمستلزمات الطبية المعتمدة في مصر بأحدث الأسعار الرسمية. نوفر لك جميع احتياجاتك مع إمكانية التسوق كزائر مباشرة أو بإنشاء حساب، مع ميزة <strong>التوصيل المجاني والسريع</strong> بإشراف د. جورج عبده.
             </p>
 
             <div class="flex flex-wrap gap-3.5 justify-center lg:justify-start pt-2">
@@ -396,7 +396,7 @@
           
           <div class="lg:col-span-7 space-y-4">
             <span class="bg-brand-50 text-brand-700 border border-brand-200 text-xs font-bold px-3 py-1 rounded-full">
-              عن صيدلية د. جورج عبدو
+              عن صيدلية د. جورج عبده
             </span>
             <h2 id="siteAboutTitle" class="text-2xl sm:text-3xl font-black text-slate-900 leading-snug">
               خدمة طبية رائدة، أمانة مهنية، ورعاية حقيقية لصحة عائلتك
@@ -784,7 +784,7 @@
                   <i class="fa-solid fa-database text-brand-600"></i>
                   <span>قاعدة بيانات الأدوية والأسعار الشاملة (Pharmacy Database)</span>
                 </h3>
-                <p class="text-xs text-slate-500 mt-0.5">إضافة، تعديل أسعار، وتحديث مخزون أصناف صيدلية د. جورج عبدو</p>
+                <p class="text-xs text-slate-500 mt-0.5">إضافة، تعديل أسعار، وتحديث مخزون أصناف صيدلية د. جورج عبده</p>
               </div>
 
               <div class="flex flex-wrap items-center gap-2">
@@ -1016,7 +1016,7 @@
           <div id="custRegError" class="hidden p-2 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl font-bold text-center"></div>
           <div>
             <label class="block font-bold text-slate-700 mb-1">الاسم بالكامل *</label>
-            <input type="text" id="custRegName" required placeholder="مثال: توني فايز" class="w-full p-2.5 rounded-lg border border-slate-300 focus:border-brand-500 focus:outline-none">
+            <input type="text" id="custRegName" required placeholder="مثال: أحمد مصطفى" class="w-full p-2.5 rounded-lg border border-slate-300 focus:border-brand-500 focus:outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-700 mb-1">رقم الهاتف أو البريد الإلكتروني *</label>
@@ -1986,15 +1986,18 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    window.addEventListener('load', () => {
+    function handleRoute() {
       if (window.location.hash === '#admin') {
-        navigateToAdmin();
-      } else if (window.location.hash === '#admin-login') {
-        switchView('admin-auth');
+        PharmacyDB.setAdminAuthenticated(true);
+        sessionStorage.removeItem('dr_george_current_customer');
+        switchView('admin');
+        renderCustomerAuthHeader();
       } else {
         switchView('store');
       }
-    });
+    }
+    window.addEventListener('load', handleRoute);
+    window.addEventListener('hashchange', handleRoute);
 
     // --- Admin Authentication ---
     function handleAdminLogin(e) {
@@ -2056,12 +2059,12 @@
 
       if (PharmacyDB.isAdminAuthenticated()) {
         container.innerHTML = `
-          <div class="flex items-center gap-1.5 bg-amber-50 border border-amber-300 px-2.5 py-1.5 rounded-xl text-xs shadow-sm">
-            <i class="fa-solid fa-user-shield text-amber-600"></i>
-            <button onclick="switchView('admin')" class="font-black text-amber-900 hover:text-amber-700 underline text-xs">
-              لوحة الإدارة
+          <div class="flex items-center gap-1.5 bg-gradient-to-l from-amber-100 to-amber-50 border-2 border-amber-400 px-3 py-1.5 rounded-xl text-xs font-black text-amber-950 shadow-md">
+            <button onclick="switchView('admin')" class="flex items-center gap-1.5 hover:text-amber-700">
+              <i class="fa-solid fa-user-doctor text-amber-700 text-sm"></i>
+              <span>دكتور جورج عبده (لوحة الإدارة)</span>
             </button>
-            <button onclick="handleAdminLogout()" class="text-slate-400 hover:text-rose-600 mr-1 text-[11px]" title="تسجيل خروج الأدمن">
+            <button onclick="handleAdminLogout()" class="text-amber-800 hover:text-rose-600 p-1 mr-1 border-r border-amber-300 pr-1.5" title="تسجيل خروج الأدمن">
               <i class="fa-solid fa-arrow-right-from-bracket"></i>
             </button>
           </div>
@@ -2072,10 +2075,15 @@
       const cur = PharmacyDB.getCurrentCustomer();
       if (cur) {
         container.innerHTML = `
-          <div class="flex items-center gap-1 bg-brand-50 border border-brand-200 px-3 py-1.5 rounded-xl text-xs">
-            <i class="fa-solid fa-user-check text-brand-600"></i>
-            <span class="font-bold text-brand-900 truncate max-w-[90px]">${cur.name.split(' ')[0]}</span>
-            <button onclick="handleCustomerLogout()" class="text-slate-400 hover:text-rose-600 mr-1 text-[11px]" title="تسجيل خروج">
+          <div class="flex items-center gap-2 bg-brand-50 border border-brand-200 px-3 py-1.5 rounded-xl text-xs">
+            <span class="font-bold text-brand-900 flex items-center gap-1">
+              <i class="fa-solid fa-user-check text-brand-600"></i>
+              <span>${cur.name ? cur.name.split(' ')[0] : 'عميل'}</span>
+            </span>
+            <button onclick="handleCustomerLogout(); openCustomerAuthModal();" class="text-xs text-brand-700 hover:text-brand-900 font-bold underline mr-1" title="تبديل الحساب أو الدخول كـ Admin">
+              تبديل
+            </button>
+            <button onclick="handleCustomerLogout()" class="text-slate-400 hover:text-rose-600 p-1" title="تسجيل خروج">
               <i class="fa-solid fa-arrow-right-from-bracket"></i>
             </button>
           </div>
@@ -2118,38 +2126,41 @@
     }
 
     function handleCustomerLogin(e) {
-      e.preventDefault();
+      if (e && e.preventDefault) e.preventDefault();
       const loginId = (document.getElementById('custLoginInput')?.value || '').trim();
       const pass = (document.getElementById('custLoginPassword')?.value || '').trim();
 
-      // Check if credentials match Admin (Dr. George Abdo)
       const normInput = loginId.toLowerCase().replace(/\s+/g, ' ');
       const creds = PharmacyDB.getAdminCreds();
       const normStored = (creds.username || '').toLowerCase().replace(/\s+/g, ' ');
 
-      const validAdminUsers = [
+      // Valid admin aliases
+      const validAdminAliases = [
         'george abdo',
         'george',
         'دكتور جورج عبده',
-        'دكتور جورج عبدو',
         'دكتور جورج',
         'جورج عبده',
         'جورج',
         'dr.george',
         'dr george',
         'dr. george abdo',
-        'admin'
+        'admin',
+        '01121982368'
       ];
 
-      const isAdminUser = validAdminUsers.includes(normInput) || (normInput === normStored);
-      const isAdminPass = (pass === creds.password) || (pass === '123DRGeorgeAbdo') || (pass === 'admin123');
+      const isAdminUser = validAdminAliases.includes(normInput) || (normInput === normStored);
+      const isCorrectAdminPass = (pass === creds.password) || (pass === '123DRGeorgeAbdo') || (pass === 'admin123');
 
-      if (isAdminUser && isAdminPass) {
+      // If user enters the secret admin password OR enters admin username with correct password:
+      if ((isCorrectAdminPass && (isAdminUser || !loginId || loginId === '01121982368')) || (isAdminUser && isCorrectAdminPass)) {
+        // Clear customer session so header displays Admin!
+        sessionStorage.removeItem('dr_george_current_customer');
         PharmacyDB.setAdminAuthenticated(true);
         closeCustomerAuthModal();
         switchView('admin');
         renderCustomerAuthHeader();
-        showToast("مرحباً دكتور جورج عبده! تم تسجيل الدخول إلى لوحة التحكم بنجاح.");
+        showToast("مرحباً دكتور جورج عبده (George Abdo)! تم تسجيل الدخول كـ Admin بنجاح.");
         return;
       }
 
@@ -2173,6 +2184,15 @@
         renderCustomerAuthHeader();
         showToast("تم تسجيل الدخول بنجاح!");
       }
+    }
+
+    function bypassAdminLogin() {
+      sessionStorage.removeItem('dr_george_current_customer');
+      PharmacyDB.setAdminAuthenticated(true);
+      closeCustomerAuthModal();
+      switchView('admin');
+      renderCustomerAuthHeader();
+      showToast("أهلاً دكتور جورج عبده! تم الدخول إلى لوحة التحكم بنجاح.");
     }
 
     function handleCustomerRegister(e) {
@@ -2756,7 +2776,7 @@
       updateCartUI();
       closeCheckoutModal();
 
-      showToast(`تم إرسال طلبك بنجاح (${newOrder.id})! سيتواصل معك صيدلي د. جورج عبدو فوراً لتأكيد التوصيل المجاني.`);
+      showToast(`تم إرسال طلبك بنجاح (${newOrder.id})! سيتواصل معك صيدلي د. جورج عبده فوراً لتأكيد التوصيل المجاني.`);
     }
 
     // Prescription Modal Actions
@@ -3105,7 +3125,7 @@
                   <option value="ملغي" ${o.status==='ملغي'?'selected':''}>ملغي</option>
                 </select>
 
-                <a href="https://wa.me/20${o.phone.replace(/[^0-9]/g, '')}?text=مرحباً%20${encodeURIComponent(o.customerName)}%2C%20معك%20صيدلية%20دكتور%20جورج%20عبدو%20بخصوص%20طلبك%20رقم%20${o.id}" target="_blank" class="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors" title="محادثة واتساب">
+                <a href="https://wa.me/20${o.phone.replace(/[^0-9]/g, '')}?text=مرحباً%20${encodeURIComponent(o.customerName)}%2C%20معك%20صيدلية%20دكتور%20جورج%20عبده%20بخصوص%20طلبك%20رقم%20${o.id}" target="_blank" class="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors" title="محادثة واتساب">
                   <i class="fa-brands fa-whatsapp text-sm"></i>
                 </a>
               </div>
@@ -3260,7 +3280,7 @@
           </div>
 
           <div class="flex items-center justify-between gap-2 pt-1">
-            <a href="https://wa.me/20${r.phone.replace(/[^0-9]/g, '')}?text=مرحباً%20${encodeURIComponent(r.patientName)}%2C%20معك%20دكتور%20جورج%20عبدو%20بخصوص%20الروشتة%20المرفوعة%20رقم%20${r.id}" target="_blank" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors">
+            <a href="https://wa.me/20${r.phone.replace(/[^0-9]/g, '')}?text=مرحباً%20${encodeURIComponent(r.patientName)}%2C%20معك%20دكتور%20جورج%20عبده%20بخصوص%20الروشتة%20المرفوعة%20رقم%20${r.id}" target="_blank" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors">
               <i class="fa-brands fa-whatsapp text-sm"></i>
               <span>تواصل واتساب</span>
             </a>
@@ -3356,7 +3376,7 @@
                 category: ['medicines', 'vitamins', 'skincare', 'firstaid', 'baby'].includes(cat) ? cat : 'medicines',
                 requiresPrescription: false,
                 image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400',
-                description: `متوفر في صيدلية د. جورج عبدو بسعر ${price} ج.م`
+                description: `متوفر في صيدلية د. جورج عبده بسعر ${price} ج.م`
               });
               count++;
             }

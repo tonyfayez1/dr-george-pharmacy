@@ -1151,7 +1151,7 @@
               <span id="cartSubtotal" class="font-bold text-slate-800">0.00 ج.م</span>
             </div>
             <div class="flex justify-between">
-              <span>مصاريف التوصيل:</span>
+              <span>رسوم التوصيل للطلب بالكامل (محددة من الصيدلية):</span>
               <span id="cartDeliveryFee" class="font-bold text-brand-600">20.00 ج.م</span>
             </div>
             <div class="flex justify-between text-sm font-black text-slate-900 pt-2 border-t border-slate-200">
@@ -1245,7 +1245,7 @@
               <span id="checkoutSubtotal" class="font-bold text-slate-900 text-xs">0.00 ج.م</span>
             </div>
             <div class="flex justify-between text-slate-600 font-semibold">
-              <span>رسوم التوصيل (المحددة من الصيدلية):</span>
+              <span>رسوم التوصيل للطلب بالكامل (محددة من الصيدلية):</span>
               <span id="checkoutDeliveryFee" class="font-black text-brand-700">0.00 ج.م</span>
             </div>
             <div class="flex justify-between items-baseline text-sm font-black text-slate-900 pt-2.5 border-t border-slate-300">
@@ -2283,6 +2283,7 @@
         CloudSync.syncOrdersFromCloud();
         CloudSync.syncPrescriptionsFromCloud();
         CloudSync.syncCustomersFromCloud();
+      testCloudConnection();
       }
     }, 8000);
 
@@ -3279,6 +3280,22 @@
       if (activeBtn) {
         activeBtn.className = "admin-tab-btn active px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-brand-600 text-white shadow-sm flex items-center gap-2 transition-colors";
       }
+
+      // Explicitly re-render and sync data for the chosen tab
+      if (tab === 'customers') {
+        renderAdminCustomers();
+        CloudSync.syncCustomersFromCloud();
+      } else if (tab === 'orders') {
+        renderAdminOrders();
+        CloudSync.syncOrdersFromCloud();
+      } else if (tab === 'prescriptions') {
+        renderAdminPrescriptions();
+        CloudSync.syncPrescriptionsFromCloud();
+      } else if (tab === 'inventory') {
+        renderAdminInventory();
+      } else if (tab === 'settings') {
+        loadAdminSettingsForm();
+      }
     }
 
     
@@ -3383,6 +3400,7 @@
         CloudSync.syncOrdersFromCloud();
         CloudSync.syncPrescriptionsFromCloud();
         CloudSync.syncCustomersFromCloud();
+      testCloudConnection();
       }
     }
 
@@ -3498,11 +3516,63 @@
       showToast(`تم حفظ ونشر سعر التوصيل سحابياً إلى ${fee.toFixed(2)} ج.م لجميع العملاء بنجاح!`);
     }
 
+    
+    // Test Live Connection & Permissions to Firebase Realtime Database
+    async function testCloudConnection(manualClick = false) {
+      const banner = document.getElementById('cloudConnectionBanner');
+      const icon = document.getElementById('cloudStatusIcon');
+      const text = document.getElementById('cloudStatusText');
+      if (!banner || !icon || !text) return;
+
+      const endpoint = CloudSync.getEndpoint();
+      const testUrl = `${endpoint}/cloud_test.json`;
+
+      try {
+        const testPayload = { ping: 'ok', timestamp: new Date().toISOString() };
+        const putRes = await fetch(testUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testPayload)
+        });
+
+        if (putRes.ok) {
+          // Success: Database is open, accessible and writable!
+          banner.className = "p-3.5 rounded-2xl text-xs font-bold flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-sm transition-all bg-emerald-50 border border-emerald-300 text-emerald-900";
+          icon.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+          text.innerHTML = '<i class="fa-solid fa-cloud-check text-emerald-600 text-sm ml-1"></i> <strong>قاعدة بيانات Firebase متصلة وشغالة بنجاح 100%!</strong> جميع الطلبات والروشتات تتزامن مباشرة بين كل الموبايلات واللابتوب.';
+          if (manualClick) showToast("الاتصال السحابي بقاعدة بيانات Firebase سليم 100%!");
+        } else if (putRes.status === 401 || putRes.status === 403) {
+          // Permission Denied: Rules need to be set to true
+          banner.className = "p-4 rounded-2xl text-xs font-bold flex flex-col gap-2 shadow-md transition-all bg-rose-50 border-2 border-rose-400 text-rose-950";
+          icon.className = "w-3 h-3 rounded-full bg-rose-600 animate-ping";
+          text.innerHTML = `
+            <div class="space-y-1">
+              <div class="flex items-center gap-1.5 text-rose-700 text-sm font-black">
+                <i class="fa-solid fa-triangle-exclamation text-base"></i>
+                <span>تنبيه هام: قاعدة بيانات Firebase ترفض حفظ الطلبات (Permission Denied)!</span>
+              </div>
+              <p class="font-semibold text-rose-800 text-[11px] leading-relaxed">
+                قاعدة البيانات مقفولة في حساب Firebase. لفتحها في 10 ثوانٍ: افتح صفحة Firebase -> اختر <strong>Realtime Database</strong> -> اضغط على تبويب <strong>Rules (قواعد البيانات)</strong> -> غيّر الكود إلى <code>{ "rules": { ".read": true, ".write": true } }</code> ثم اضغط <strong>Publish (نشر)</strong>.
+              </p>
+            </div>
+          `;
+          if (manualClick) alert("قاعدة البيانات ترفض الكتابة (Permission Denied). يرجى تغيير الـ Rules في Firebase إلى true.");
+        } else {
+          throw new Error(`HTTP ${putRes.status}`);
+        }
+      } catch (err) {
+        banner.className = "p-3.5 rounded-2xl text-xs font-bold flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-sm transition-all bg-amber-50 border border-amber-300 text-amber-900";
+        icon.className = "w-2.5 h-2.5 rounded-full bg-amber-500";
+        text.innerHTML = `<i class="fa-solid fa-circle-exclamation text-amber-600 ml-1"></i> تعذر الوصول إلى سيرفر Firebase (${err.message}). تحقق من اتصال الإنترنت وقواعد الأمان.`;
+      }
+    }
+
     function renderAdminDashboard() {
       applySiteSettings();
       CloudSync.syncOrdersFromCloud();
       CloudSync.syncPrescriptionsFromCloud();
       CloudSync.syncCustomersFromCloud();
+      testCloudConnection();
       renderAdminKPIs();
       renderAdminOrders();
       renderAdminPrescriptions();
@@ -3604,9 +3674,22 @@
 
     function changeOrderStatus(orderId, newStatus) {
       PharmacyDB.updateOrderStatus(orderId, newStatus);
+      
+      // Update status in Firebase immediately
+      try {
+        if (fbDb) {
+          fbDb.ref('orders/' + orderId + '/status').set(newStatus);
+        }
+        fetch(`${CloudSync.getEndpoint()}/orders/${orderId}/status.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newStatus)
+        }).catch(() => {});
+      } catch (err) {}
+
       renderAdminKPIs();
       renderAdminOrders();
-      showToast(`تم تحديث حالة الطلب (${orderId}) إلى "${newStatus}"`);
+      showToast(`تم تحديث حالة الطلب (${orderId}) إلى "${newStatus}" بنجاح.`);
     }
 
     // Prescription Image Zoom Modal Functions
@@ -3780,9 +3863,38 @@
 
     function changeRxStatus(rxId, newStatus) {
       PharmacyDB.updatePrescriptionStatus(rxId, newStatus);
+      
+      // Update in Firebase Realtime Database immediately so cloud never reverts it!
+      try {
+        if (fbDb) {
+          fbDb.ref('prescriptions/' + rxId + '/status').set(newStatus);
+        }
+        fetch(`${CloudSync.getEndpoint()}/prescriptions/${rxId}/status.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newStatus)
+        }).catch(() => {});
+      } catch (err) {}
+
       renderAdminKPIs();
       renderAdminPrescriptions();
-      showToast(`تم تحديث حالة الروشتة (${rxId}) إلى "${newStatus}"`);
+      showToast(`تم تأكيد وتحديث حالة الروشتة (${rxId}) إلى "${newStatus}" بنجاح.`);
+    }
+
+    // Direct Image Download for Prescriptions
+    function downloadRxImage(rxId) {
+      const rx = PharmacyDB.getPrescriptions().find(r => r.id === rxId);
+      if (!rx || !rx.imageSrc) {
+        showToast("لا توجد صورة مرفقة مع هذه الروشتة لتنزيلها.");
+        return;
+      }
+      const link = document.createElement('a');
+      link.href = rx.imageSrc;
+      link.download = `روشتة_${rx.patientName ? rx.patientName.replace(/\s+/g, '_') : 'مريض'}_${rx.id}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("جاري تنزيل صورة الروشتة إلى جهازك بنجاح...");
     }
 
     function renderAdminInventory() {

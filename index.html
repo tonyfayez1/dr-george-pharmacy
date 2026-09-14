@@ -1135,7 +1135,7 @@
 
         <div class="bg-brand-50 border-b border-brand-100 p-3 text-xs text-brand-900 flex items-center justify-between">
           <span class="font-bold"><i class="fa-solid fa-truck-fast text-brand-600 ml-1"></i> رسوم التوصيل المحددة لطلبك:</span>
-          <span id="cartDeliveryFeeBanner" class="text-brand-700 bg-brand-100 px-2 py-0.5 rounded font-black text-[11px]">20.00 ج.م</span>
+          <span id="cartDeliveryFeeBanner" class="text-brand-700 bg-brand-100 px-2 py-0.5 rounded font-black text-[11px]">حسب التسعيرة</span>
         </div>
 
         <div id="cartItemsList" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar"></div>
@@ -1151,7 +1151,7 @@
           </a>
         </div>
 
-        <div id="cartSummaryFooter" class="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
+        <div id="cartSummaryFooter" class="hidden p-4 bg-slate-50 border-t border-slate-200 space-y-3">
           <div class="space-y-1.5 text-xs text-slate-600">
             <div class="flex justify-between">
               <span>المجموع الفرعي:</span>
@@ -1957,84 +1957,115 @@
 
       async syncCustomersFromCloud() {
         try {
-          if (fbDb) {
+          const processCustData = (data) => {
+            let cloudList = [];
+            if (data && typeof data === 'object') {
+              cloudList = Object.entries(data).map(([k, v]) => {
+                if (v && typeof v === 'object') {
+                  return { ...v, id: v.id || k };
+                }
+                return null;
+              }).filter(Boolean);
+            }
+
+            // Authoritative mirror: cloud is the single source of truth across all devices
+            localStorage.setItem('dr_george_customers', JSON.stringify(cloudList));
+            try { renderAdminCustomers(); } catch (e) {}
+          };
+
+          if (typeof fbDb !== 'undefined' && fbDb) {
             fbDb.ref('customers').once('value').then(snap => {
-              const data = snap.val();
-              if (data && typeof data === 'object') {
-                const cloudList = Object.values(data);
-                const localList = PharmacyDB.getCustomers();
-                const map = new Map();
-                localList.forEach(c => map.set(c.id, c));
-                cloudList.forEach(c => map.set(c.id, c));
-                const merged = Array.from(map.values()).sort((a, b) => (b.registeredAt > a.registeredAt ? -1 : 1));
-                localStorage.setItem('dr_george_customers', JSON.stringify(merged));
-                renderAdminCustomers();
-              }
-            });
+              processCustData(snap.val());
+            }).catch(() => {});
             return;
           }
           const res = await fetch(`${this.getEndpoint()}/customers.json`);
           if (res.ok) {
             const data = await res.json();
-            if (data && typeof data === 'object') {
-              const cloudList = Object.values(data);
-              const localList = PharmacyDB.getCustomers();
-              const map = new Map();
-              localList.forEach(c => map.set(c.id, c));
-              cloudList.forEach(c => map.set(c.id, c));
-              const merged = Array.from(map.values()).sort((a, b) => (b.registeredAt > a.registeredAt ? -1 : 1));
-              localStorage.setItem('dr_george_customers', JSON.stringify(merged));
-              renderAdminCustomers();
-            }
+            processCustData(data);
           }
-        } catch (err) {}
+        } catch (err) {
+          console.error("Customers sync error:", err);
+        }
       },
 
       // --- 5. Start Live WebSocket Realtime Listeners ---
       initRealtimeListeners() {
         if (!fbDb) return;
         try {
-          // Listen for new orders live
+          // 1. Listen for new orders live
           fbDb.ref('orders').on('child_added', (snap) => {
             const order = snap.val();
-            if (order && order.id) {
+            const orderId = snap.key || (order && order.id);
+            if (order) {
+              const cleanOrder = { ...order, id: orderId };
               const orders = PharmacyDB.getOrders();
-              if (!orders.some(o => o.id === order.id)) {
-                orders.unshift(order);
+              if (!orders.some(o => o && o.id === orderId)) {
+                orders.unshift(cleanOrder);
                 localStorage.setItem('dr_george_orders', JSON.stringify(orders));
                 if (PharmacyDB.isAdminAuthenticated()) {
                   renderAdminKPIs();
                   renderAdminOrders();
-                  showToast(`🔔 تنبيه فوري: تم استلام طلب جديد (${order.id}) من العميل: ${order.customerName}!`);
+                  showToast(`🔔 تنبيه فوري: تم استلام طلب جديد (${orderId}) من العميل: ${cleanOrder.customerName || 'عميل'}!`);
                 }
               }
             }
           });
 
-          // Listen for new prescriptions live
+          // 2. Listen for deleted orders live across all devices
+          fbDb.ref('orders').on('child_removed', (snap) => {
+            const delId = snap.key || (snap.val() && snap.val().id);
+            if (delId) {
+              const filtered = PharmacyDB.getOrders().filter(o => o && o.id !== delId);
+              localStorage.setItem('dr_george_orders', JSON.stringify(filtered));
+              if (PharmacyDB.isAdminAuthenticated()) {
+                renderAdminKPIs();
+                renderAdminOrders();
+              }
+            }
+          });
+
+          // 3. Listen for new prescriptions live
           fbDb.ref('prescriptions').on('child_added', (snap) => {
             const rx = snap.val();
-            if (rx && rx.id) {
+            const rxId = snap.key || (rx && rx.id);
+            if (rx) {
+              const cleanRx = { ...rx, id: rxId };
               const rxs = PharmacyDB.getPrescriptions();
-              if (!rxs.some(r => r.id === rx.id)) {
-                rxs.unshift(rx);
+              if (!rxs.some(r => r && r.id === rxId)) {
+                rxs.unshift(cleanRx);
                 localStorage.setItem('dr_george_prescriptions', JSON.stringify(rxs));
                 if (PharmacyDB.isAdminAuthenticated()) {
                   renderAdminKPIs();
                   renderAdminPrescriptions();
-                  showToast(`🔔 تنبيه فوري: تم استلام روشتة جديدة (${rx.id}) من المريض: ${rx.patientName}!`);
+                  showToast(`🔔 تنبيه فوري: تم استلام روشتة جديدة (${rxId}) من المريض: ${cleanRx.patientName || 'مريض'}!`);
                 }
               }
             }
           });
 
-          // Listen for new registered customers live
+          // 4. Listen for deleted prescriptions live across all devices
+          fbDb.ref('prescriptions').on('child_removed', (snap) => {
+            const delId = snap.key || (snap.val() && snap.val().id);
+            if (delId) {
+              const filtered = PharmacyDB.getPrescriptions().filter(r => r && r.id !== delId);
+              localStorage.setItem('dr_george_prescriptions', JSON.stringify(filtered));
+              if (PharmacyDB.isAdminAuthenticated()) {
+                renderAdminKPIs();
+                renderAdminPrescriptions();
+              }
+            }
+          });
+
+          // 5. Listen for new registered customers live
           fbDb.ref('customers').on('child_added', (snap) => {
             const cust = snap.val();
-            if (cust && cust.id) {
+            const custId = snap.key || (cust && cust.id);
+            if (cust) {
+              const cleanCust = { ...cust, id: custId };
               const custs = PharmacyDB.getCustomers();
-              if (!custs.some(c => c.id === cust.id)) {
-                custs.unshift(cust);
+              if (!custs.some(c => c && c.id === custId)) {
+                custs.unshift(cleanCust);
                 localStorage.setItem('dr_george_customers', JSON.stringify(custs));
                 if (PharmacyDB.isAdminAuthenticated()) {
                   renderAdminCustomers();
@@ -2043,21 +2074,91 @@
             }
           });
 
-          // Listen for delivery fee updates live across all clients
+          // 6. Listen for deleted customers live across all devices
+          fbDb.ref('customers').on('child_removed', (snap) => {
+            const delId = snap.key || (snap.val() && snap.val().id);
+            if (delId) {
+              const filtered = PharmacyDB.getCustomers().filter(c => c && c.id !== delId);
+              localStorage.setItem('dr_george_customers', JSON.stringify(filtered));
+              if (PharmacyDB.isAdminAuthenticated()) {
+                renderAdminCustomers();
+              }
+            }
+          });
+
+          // 7. Listen for delivery fee updates live across all clients in real time
           fbDb.ref('settings/deliveryFee').on('value', (snap) => {
             const fee = snap.val();
             if (fee !== null && !isNaN(fee)) {
-              localStorage.setItem('dr_george_delivery_fee', parseFloat(fee).toFixed(2));
+              const numFee = parseFloat(fee);
+              localStorage.setItem('dr_george_delivery_fee', numFee.toFixed(2));
               updateCartUI();
+              const dfInp = document.getElementById('adminDeliveryFeeInput');
+              if (dfInp && dfInp !== document.activeElement) {
+                dfInp.value = numFee;
+              }
             }
           });
-          console.log("Firebase Realtime Listeners Active!");
-        } catch (e) {
-          console.warn("Realtime listeners error:", e);
+
+          // 8. Listen for admin credentials updates live across all devices
+          fbDb.ref('settings/adminCreds').on('value', (snap) => {
+            const creds = snap.val();
+            if (creds && typeof creds === 'object' && creds.password) {
+              localStorage.setItem('dr_george_admin_creds', JSON.stringify(creds));
+            }
+          });
+
+          console.log("Firebase Realtime Listeners Active across all clients!");
+        } catch (err) {
+          console.warn("Realtime listener init error:", err);
         }
+      },
+
+      // --- 6. Admin Credentials Cloud Sync ---
+      async syncAdminCreds(creds) {
+        try {
+          if (typeof fbDb !== 'undefined' && fbDb) {
+            fbDb.ref('settings/adminCreds').set(creds);
+          }
+          fetch(`${this.getEndpoint()}/settings/adminCreds.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(creds)
+          }).catch(() => {});
+        } catch (err) {}
+      },
+
+      async syncAdminCredsFromCloud() {
+        try {
+          if (typeof fbDb !== 'undefined' && fbDb) {
+            fbDb.ref('settings/adminCreds').once('value').then(snap => {
+              const val = snap.val();
+              if (val && typeof val === 'object' && val.password) {
+                localStorage.setItem('dr_george_admin_creds', JSON.stringify(val));
+              }
+            });
+            return;
+          }
+          const res = await fetch(`${this.getEndpoint()}/settings/adminCreds.json`);
+          if (res.ok) {
+            const val = await res.json();
+            if (val && typeof val === 'object' && val.password) {
+              localStorage.setItem('dr_george_admin_creds', JSON.stringify(val));
+            }
+          }
+        } catch (err) {}
+      },
+
+      // Central initialization for CloudSync
+      init() {
+        // Fetch authoritative delivery fee from cloud immediately
+        this.syncDeliveryFeeFromCloud();
+        // Fetch authoritative admin credentials from cloud immediately
+        this.syncAdminCredsFromCloud();
+        // Start WebSocket listeners
+        this.initRealtimeListeners();
       }
     };
-
 
     const PharmacyDB = {
       init() {
@@ -2068,44 +2169,20 @@
         if (false) {
           localStorage.setItem('dr_george_medicines', JSON.stringify(PHARMACY_DATABASE_SEED));
         }
-        if (!localStorage.getItem('dr_george_orders')) {
-          const sampleOrder = [{
-            id: 'ORD-101',
-            customerName: 'محمد إبراهيم علي',
-            phone: '01012345678',
-            address: 'شارع الجمهورية، عمارة 12، الدور 3',
-            items: [
-              { name: 'بانادول إكسترا (Panadol Extra)', price: 45.00, qty: 2 },
-              { name: 'فيتامين سي 1000 مجم + زنك فوار', price: 65.00, qty: 1 }
-            ],
-            subtotal: 155.00,
-            deliveryFee: 0.00,
-            total: 155.00,
-            date: new Date().toLocaleDateString('ar-EG') + ' ' + new Date().toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'}),
-            status: 'قيد التجهيز',
-            notes: 'يرجى الاتصال قبل الوصول'
-          }];
-          localStorage.setItem('dr_george_orders', JSON.stringify(sampleOrder));
+        if (!localStorage.getItem('dr_george_seeded_v2')) {
+          localStorage.setItem('dr_george_seeded_v2', 'true');
+          if (!localStorage.getItem('dr_george_orders')) {
+            localStorage.setItem('dr_george_orders', '[]');
+          }
+          if (!localStorage.getItem('dr_george_prescriptions')) {
+            localStorage.setItem('dr_george_prescriptions', '[]');
+          }
         }
-                if (!localStorage.getItem('dr_george_admin_creds')) {
+        if (!localStorage.getItem('dr_george_admin_creds')) {
           localStorage.setItem('dr_george_admin_creds', JSON.stringify({
             username: 'George Abdo',
             password: '123DRGeorgeAbdo'
           }));
-        }
-        if (!localStorage.getItem('dr_george_prescriptions')) {
-          const sampleRx = [{
-            id: 'RX-501',
-            patientName: 'مريم عادل ميخائيل',
-            phone: '01223456789',
-            address: 'شارع النصر، برج الأطباء، شقة 5',
-            date: new Date().toLocaleDateString('ar-EG') + ' ' + new Date().toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'}),
-            fileName: 'روشتة_علاجية.jpg',
-            imageSrc: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800',
-            notes: 'يرجى توفير بديل مصري للأوجمنتين إذا أمكن',
-            status: 'قيد المراجعة'
-          }];
-          localStorage.setItem('dr_george_prescriptions', JSON.stringify(sampleRx));
         }
       },
 
@@ -2239,10 +2316,16 @@
       },
 
       // Customer Accounts
-            deleteCustomer(id) {
+      deleteCustomer(id) {
         let list = this.getCustomers();
-        list = list.filter(c => c.id != id);
+        list = list.filter(c => c && c.id != id);
         localStorage.setItem('dr_george_customers', JSON.stringify(list));
+        try {
+          if (typeof fbDb !== 'undefined' && fbDb) {
+            fbDb.ref('customers/' + id).remove();
+          }
+          fetch(`${CloudSync.getEndpoint()}/customers/${id}.json`, { method: 'DELETE' }).catch(() => {});
+        } catch (e) {}
       },
       getCustomers() {
         return JSON.parse(localStorage.getItem('dr_george_customers') || '[]');
@@ -2285,10 +2368,12 @@
         return JSON.parse(localStorage.getItem('dr_george_admin_creds') || '{"username":"دكتور جورج","password":"123DRGeorgeAbdo"}');
       },
       updateAdminCreds(newUsername, newPassword) {
-        localStorage.setItem('dr_george_admin_creds', JSON.stringify({
+        const creds = {
           username: newUsername,
           password: newPassword
-        }));
+        };
+        localStorage.setItem('dr_george_admin_creds', JSON.stringify(creds));
+        CloudSync.syncAdminCreds(creds);
       },
       isAdminAuthenticated() {
         return sessionStorage.getItem('dr_george_admin_authenticated') === 'true';
@@ -2304,6 +2389,8 @@
 
     PharmacyDB.init();
     applySiteSettings();
+    CloudSync.init();
+    updateCartUI();
 
     // --- Navigation & Routing ---
         function navigateToAdmin() {
@@ -2381,7 +2468,7 @@
     window.addEventListener('hashchange', handleRoute);
 
     // --- Admin Authentication ---
-    function handleAdminLogin(e) {
+    async function handleAdminLogin(e) {
       if (e && e.preventDefault) e.preventDefault();
       const userEl = document.getElementById('adminUsername');
       const passEl = document.getElementById('adminPassword');
@@ -2402,11 +2489,28 @@
         'admin'
       ];
 
-      const creds = PharmacyDB.getAdminCreds();
-      const normalizedStored = creds.username.toLowerCase().replace(/\s+/g, ' ');
+      let creds = PharmacyDB.getAdminCreds();
+      let normalizedStored = (creds.username || '').toLowerCase().replace(/\s+/g, ' ');
 
-      const isUserMatch = validUsers.includes(normalizedInput) || (normalizedInput === normalizedStored);
-      const isPassMatch = (pass === creds.password) || (pass === '123DRGeorgeAbdo') || (pass === 'admin123');
+      let isUserMatch = validUsers.includes(normalizedInput) || (normalizedInput === normalizedStored);
+      let isPassMatch = (pass === creds.password);
+
+      // If local check failed, check Firebase live directly (for fresh mobile devices)
+      if (!isPassMatch || !isUserMatch) {
+        try {
+          const res = await fetch(`${CloudSync.getEndpoint()}/settings/adminCreds.json`);
+          if (res.ok) {
+            const cloudCreds = await res.json();
+            if (cloudCreds && cloudCreds.password) {
+              creds = cloudCreds;
+              localStorage.setItem('dr_george_admin_creds', JSON.stringify(creds));
+              normalizedStored = (creds.username || '').toLowerCase().replace(/\s+/g, ' ');
+              isUserMatch = validUsers.includes(normalizedInput) || (normalizedInput === normalizedStored);
+              isPassMatch = (pass === creds.password);
+            }
+          }
+        } catch (err) {}
+      }
 
       if (isUserMatch && isPassMatch) {
         PharmacyDB.setAdminAuthenticated(true);
@@ -2415,7 +2519,10 @@
         showToast("أهلاً بك دكتور جورج عبده! تم الدخول إلى لوحة التحكم بنجاح.");
       } else {
         const errBox = document.getElementById('adminLoginError');
-        if (errBox) errBox.classList.remove('hidden');
+        if (errBox) {
+          errBox.innerText = 'اسم المستخدم أو كلمة المرور غير صحيحة!';
+          errBox.classList.remove('hidden');
+        }
       }
     }
 

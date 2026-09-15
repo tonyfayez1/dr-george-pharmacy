@@ -1859,26 +1859,27 @@
       async syncOrdersFromCloud() {
         try {
           const processOrdersData = (data) => {
-            if (!data || typeof data !== 'object') return;
-            const cloudList = Object.entries(data).map(([k, v]) => {
-              if (v && typeof v === 'object') {
-                return { ...v, id: v.id || k };
-              }
-              return null;
-            }).filter(Boolean);
+            let cloudList = [];
+            if (data && typeof data === 'object') {
+              cloudList = Object.entries(data).map(([k, v]) => {
+                if (v && typeof v === 'object') {
+                  return { ...v, id: v.id || k };
+                }
+                return null;
+              }).filter(Boolean);
+            }
 
-            const localList = PharmacyDB.getOrders();
-            const map = new Map();
-            localList.forEach(o => { if (o && o.id) map.set(o.id, o); });
-            cloudList.forEach(o => { if (o && o.id) map.set(o.id, o); });
-            
-            const merged = Array.from(map.values()).sort((a, b) => {
+            // Permanently filter out sample order ORD-101
+            cloudList = cloudList.filter(o => o && o.id !== 'ORD-101' && o.customerName !== 'محمد إبراهيم علي');
+
+            cloudList.sort((a, b) => {
               const da = a && a.date ? String(a.date) : '';
               const db = b && b.date ? String(b.date) : '';
               return db.localeCompare(da);
             });
-            
-            localStorage.setItem('dr_george_orders', JSON.stringify(merged));
+
+            // Authoritative mirror: cloud is the single source of truth across all devices
+            localStorage.setItem('dr_george_orders', JSON.stringify(cloudList));
             try { renderAdminKPIs(); } catch (e) {}
             try { renderAdminOrders(); } catch (e) {}
           };
@@ -1916,26 +1917,27 @@
       async syncPrescriptionsFromCloud() {
         try {
           const processRxData = (data) => {
-            if (!data || typeof data !== 'object') return;
-            const cloudList = Object.entries(data).map(([k, v]) => {
-              if (v && typeof v === 'object') {
-                return { ...v, id: v.id || k };
-              }
-              return null;
-            }).filter(Boolean);
+            let cloudList = [];
+            if (data && typeof data === 'object') {
+              cloudList = Object.entries(data).map(([k, v]) => {
+                if (v && typeof v === 'object') {
+                  return { ...v, id: v.id || k };
+                }
+                return null;
+              }).filter(Boolean);
+            }
 
-            const localList = PharmacyDB.getPrescriptions();
-            const map = new Map();
-            localList.forEach(r => { if (r && r.id) map.set(r.id, r); });
-            cloudList.forEach(r => { if (r && r.id) map.set(r.id, r); });
-            
-            const merged = Array.from(map.values()).sort((a, b) => {
+            // Permanently filter out sample prescription RX-501
+            cloudList = cloudList.filter(r => r && r.id !== 'RX-501' && r.patientName !== 'مريم عادل ميخائيل');
+
+            cloudList.sort((a, b) => {
               const da = a && a.date ? String(a.date) : '';
               const db = b && b.date ? String(b.date) : '';
               return db.localeCompare(da);
             });
-            
-            localStorage.setItem('dr_george_prescriptions', JSON.stringify(merged));
+
+            // Authoritative mirror: cloud is the single source of truth across all devices
+            localStorage.setItem('dr_george_prescriptions', JSON.stringify(cloudList));
             try { renderAdminKPIs(); } catch (e) {}
             try { renderAdminPrescriptions(); } catch (e) {}
           };
@@ -2172,6 +2174,16 @@
         this.syncAdminCredsFromCloud();
         // Start WebSocket listeners
         this.initRealtimeListeners();
+
+        // One-time deletion of sample mock data from Firebase cloud
+        try {
+          if (typeof fbDb !== 'undefined' && fbDb) {
+            fbDb.ref('orders/ORD-101').remove();
+            fbDb.ref('prescriptions/RX-501').remove();
+          }
+          fetch(`${this.getEndpoint()}/orders/ORD-101.json`, { method: 'DELETE' }).catch(() => {});
+          fetch(`${this.getEndpoint()}/prescriptions/RX-501.json`, { method: 'DELETE' }).catch(() => {});
+        } catch (e) {}
       }
     };
 
@@ -2193,6 +2205,20 @@
             localStorage.setItem('dr_george_prescriptions', '[]');
           }
         }
+        // Automatic permanent purge of sample mock data (ORD-101 and RX-501)
+        try {
+          let curOrders = JSON.parse(localStorage.getItem('dr_george_orders') || '[]');
+          if (Array.isArray(curOrders) && curOrders.some(o => o && (o.id === 'ORD-101' || o.customerName === 'محمد إبراهيم علي'))) {
+            curOrders = curOrders.filter(o => o && o.id !== 'ORD-101' && o.customerName !== 'محمد إبراهيم علي');
+            localStorage.setItem('dr_george_orders', JSON.stringify(curOrders));
+          }
+          let curRxs = JSON.parse(localStorage.getItem('dr_george_prescriptions') || '[]');
+          if (Array.isArray(curRxs) && curRxs.some(r => r && (r.id === 'RX-501' || r.patientName === 'مريم عادل ميخائيل'))) {
+            curRxs = curRxs.filter(r => r && r.id !== 'RX-501' && r.patientName !== 'مريم عادل ميخائيل');
+            localStorage.setItem('dr_george_prescriptions', JSON.stringify(curRxs));
+          }
+        } catch (e) {}
+
         if (!localStorage.getItem('dr_george_admin_creds')) {
           localStorage.setItem('dr_george_admin_creds', JSON.stringify({
             username: 'George Abdo',
@@ -2621,7 +2647,7 @@
       }
     }
 
-    function handleCustomerLogin(e) {
+    async function handleCustomerLogin(e) {
       if (e && e.preventDefault) e.preventDefault();
       const loginId = (document.getElementById('custLoginInput')?.value || '').trim();
       const pass = (document.getElementById('custLoginPassword')?.value || '').trim();
@@ -2637,8 +2663,8 @@
       }
 
       const normInput = loginId.toLowerCase().replace(/\s+/g, ' ');
-      const creds = PharmacyDB.getAdminCreds();
-      const normStored = (creds.username || '').toLowerCase().replace(/\s+/g, ' ');
+      let creds = PharmacyDB.getAdminCreds();
+      let normStored = (creds.username || '').toLowerCase().replace(/\s+/g, ' ');
 
       const validAdminAliases = [
         'george abdo',
@@ -2654,10 +2680,25 @@
         '01121982368'
       ];
 
-      const isAdminUser = validAdminAliases.includes(normInput) || (normInput === normStored);
-      const isCorrectAdminPass = (pass === creds.password) || (pass === '123DRGeorgeAbdo');
+      const isAdminUser = validAdminAliases.includes(normInput) || (normInput === normStored) || (normInput === 'دكتور' || normInput === 'صيدلي' || normInput === 'pharmacy');
+      let isCorrectAdminPass = (pass === creds.password);
 
-      // 1. ADMIN ATTEMPT CHECK
+      // If local password check failed for admin, check Firebase live (ensures mobile gets newly changed password)
+      if (isAdminUser && !isCorrectAdminPass) {
+        try {
+          const res = await fetch(`${CloudSync.getEndpoint()}/settings/adminCreds.json`);
+          if (res.ok) {
+            const cloudCreds = await res.json();
+            if (cloudCreds && cloudCreds.password) {
+              creds = cloudCreds;
+              localStorage.setItem('dr_george_admin_creds', JSON.stringify(creds));
+              isCorrectAdminPass = (pass === creds.password);
+            }
+          }
+        } catch (err) {}
+      }
+
+      // 1. ADMIN ATTEMPT CHECK (STRICT: only active current password accepted, no old passwords)
       if (isAdminUser) {
         if (isCorrectAdminPass) {
           sessionStorage.removeItem('dr_george_current_customer');
@@ -2670,22 +2711,11 @@
         } else {
           // Wrong password for Admin
           if (errBox) {
-            errBox.innerText = 'كلمة المرور غير صحيحة لحساب دكتور جورج عبده! يرجى إعادة المحاولة.';
+            errBox.innerText = 'كلمة المرور غير صحيحة لحساب دكتور جورج عبده! يرجى إدخال كلمة المرور الحالية.';
             errBox.classList.remove('hidden');
           }
           return;
         }
-      }
-
-      // Check if user entered admin password with another username
-      if (isCorrectAdminPass && (normInput === 'دكتور' || normInput === 'صيدلي' || normInput === 'pharmacy')) {
-        sessionStorage.removeItem('dr_george_current_customer');
-        PharmacyDB.setAdminAuthenticated(true);
-        closeCustomerAuthModal();
-        switchView('admin');
-        renderCustomerAuthHeader();
-        showToast("مرحباً دكتور جورج عبده! تم الدخول كـ Admin بنجاح.");
-        return;
       }
 
       // 2. REGISTERED CUSTOMER CHECK

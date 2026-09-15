@@ -3311,6 +3311,7 @@
 
     // --- Customer Order Tracking & History (طلباتي) Logic ---
 // --- Customer Order Tracking & History (طلباتي) Logic ---
+// --- Customer Order Tracking & History (طلباتي) Logic ---
     async function openMyOrdersModal() {
       const cur = PharmacyDB.getCurrentCustomer();
       const phoneInput = document.getElementById('myOrdersPhoneSearch');
@@ -3326,9 +3327,10 @@
     }
 
     async function searchMyOrdersByPhone() {
-      const query = (document.getElementById('myOrdersPhoneSearch')?.value || '').trim().replace(/[^0-9]/g, '');
+      const searchInput = document.getElementById('myOrdersPhoneSearch');
+      const query = String(searchInput ? searchInput.value : '').trim().replace(/[^0-9]/g, '');
       
-      // جلب أحدث بيانات الطلبات وحالاتها من سحابة Firebase مباشرة ليراها العميل فوراً
+      // جلب أحدث بيانات الطلبات فوراً من السحابة ليراها العميل بالحالة المحدثة
       try {
         const res = await fetch(`${CloudSync.getEndpoint()}/orders.json`);
         if (res.ok) {
@@ -3349,16 +3351,20 @@
         }
       } catch (e) {}
 
-      const orders = PharmacyDB.getOrders();
+      const rawOrders = PharmacyDB.getOrders();
+      const orders = Array.isArray(rawOrders) ? rawOrders.filter(Boolean) : [];
 
       if (!query) {
-        renderMyOrdersList(orders.slice(0, 5)); // عرض آخر الطلبات إذا كان البحث فارغاً
+        renderMyOrdersList(orders.slice(0, 5)); // عرض آخر 5 طلبات إذا كان حقل البحث فارغاً
         return;
       }
 
       const filtered = orders.filter(o => {
-        const cleanPhone = (o.phone || '').replace(/[^0-9]/g, '');
-        return cleanPhone.includes(query) || (o.customerName && o.customerName.includes(query));
+        if (!o || typeof o !== 'object') return false;
+        const cleanPhone = String(o.phone || '').replace(/[^0-9]/g, '');
+        const custName = String(o.customerName || '');
+        const orderId = String(o.id || '');
+        return (cleanPhone && cleanPhone.includes(query)) || custName.includes(query) || orderId.includes(query);
       });
 
       renderMyOrdersList(filtered);
@@ -3367,58 +3373,86 @@
     function renderMyOrdersList(ordersList) {
       const container = document.getElementById('myOrdersListContainer');
       const emptyState = document.getElementById('myOrdersEmptyState');
-      if (!container || !ejmptyState) return;
+      if (!container || !emptyState) return;
 
-      if (!ordersList || ordersList.length === 0) {
+      const list = Array.isArray(ordersList) ? ordersList.filter(Boolean) : [];
+
+      if (list.length === 0) {
         container.innerHTML = '';
         emptyState.classList.remove('hidden');
         return;
       }
       emptyState.classList.add('hidden');
 
-      container.innerHTML = ordersList.map(o => {
-        let statusBadge = '';
-        if (o.status === 'قيد المراجعة') {
-          statusBadge = '<span class="bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-bold text-[11px]"><i class="fa-solid fa-hourglass-half ml-1"></i> قيد المراجعة</span>';
-        } else if (o.status === 'جاري التجهيز') {
-          statusBadge = '<span class="bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full font-bold text-[11px]"><i class="fa-solid fa-box ml-1"></i> جاري التجهيز والشحن</span>';
-        } else if (o.status === 'تم التوصيل') {
-          statusBadge = '<span class="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold text-[11px]"><i class="fa-solid fa-circle-check ml-1"></i> تم التوصيل بنجاح</span>';
-        } else {
-          statusBadge = `<span class="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-bold text-[11px]">${o.status}</span>`;
+      container.innerHTML = list.map(o => {
+        try {
+          if (!o || typeof o !== 'object') return '';
+
+          const orderId = String(o.id || 'ORD');
+          const orderDate = String(o.date || '');
+          const orderStatus = String(o.status || 'قيد المراجعة');
+          const orderAddress = String(o.address || 'استلام من الصيدلية');
+          const paymentMethod = String(o.paymentMethod || 'كاش');
+          const totalNum = Number(o.total !== undefined ? o.total : (o.subtotal || 0));
+          const totalFormatted = isNaN(totalNum) ? '0.00' : totalNum.toFixed(2);
+
+          let statusBadge = '';
+          if (orderStatus === 'قيد المراجعة') {
+            statusBadge = '<span class="bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-bold text-[11px] inline-flex items-center gap-1"><i class="fa-solid fa-hourglass-half"></i> قيد المراجعة</span>';
+          } else if (orderStatus === 'جاري التجهيز') {
+            statusBadge = '<span class="bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full font-bold text-[11px] inline-flex items-center gap-1"><i class="fa-solid fa-box"></i> جاري التجهيز والشحن</span>';
+          } else if (orderStatus === 'تم التوصيل') {
+            statusBadge = '<span class="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold text-[11px] inline-flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> تم التوصيل بنجاح</span>';
+          } else if (orderStatus === 'ملغي') {
+            statusBadge = '<span class="bg-rose-100 text-rose-800 px-2.5 py-0.5 rounded-full font-bold text-[11px] inline-flex items-center gap-1"><i class="fa-solid fa-ban"></i> ملغي</span>';
+          } else {
+            statusBadge = `<span class="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-bold text-[11px]">${orderStatus}</span>`;
+          }
+
+          // معالجة الأصناف سواء كانت Array أو Object قادمة من Firebase بأمان تام
+          let itemsList = [];
+          if (Array.isArray(o.items)) {
+            itemsList = o.items.filter(Boolean);
+          } else if (o.items && typeof o.items === 'object') {
+            itemsList = Object.values(o.items).filter(Boolean);
+          }
+          const itemsText = itemsList.length > 0
+            ? itemsList.map(i => `${i.name || 'صنف'} (×${i.qty || 1})`).join('، ')
+            : 'أدوية ومستلزمات';
+
+          return `
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5 text-xs hover:border-brand-300 transition-colors">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="font-extrabold text-brand-700 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">${orderId}</span>
+                  <span class="text-[11px] text-slate-400 mr-2 font-mono">${orderDate}</span>
+                </div>
+                <div>${statusBadge}</div>
+              </div>
+
+              <div class="bg-white p-2.5 rounded-xl border border-slate-200 text-slate-700 space-y-1">
+                <div class="font-bold text-slate-800">الأصناف: <span class="font-normal text-slate-600">${itemsText}</span></div>
+                <div class="text-[11px] text-slate-500">عنوان التوصيل: ${orderAddress}</div>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <div class="flex items-center gap-3">
+                  <span class="font-black text-slate-900 text-sm">المجموع: ${totalFormatted} ج.م</span>
+                  <span class="text-[11px] text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded">طريقة الدفع: ${paymentMethod}</span>
+                </div>
+
+                <a href="https://wa.me/201121982368?text=${encodeURIComponent('مرحباً دكتور جورج عبده، أستفسر عن حالة طلبي رقم ' + orderId)}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow transition-colors">
+                  <i class="fa-brands fa-whatsapp"></i>
+                  <span>تواصل واتساب</span>
+                </a>
+              </div>
+            </div>
+          `;
+        } catch (err) {
+          console.error("Error rendering customer order row:", err);
+          return '';
         }
-
-        const itemsText = (o.items || []).map(i => `${i.name} (×${i.qty})`).join('، ') || 'أدوية ومستلزمات';
-
-        return `
-          <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5 text-xs hover:border-brand-300 transition-colors">
-            <div class="flex items-center justify-between">
-              <div>
-                <span class="font-extrabold text-brand-700 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">${o.id}</span>
-                <span class="text-[11px] text-slate-400 mr-2">${o.date}</span>
-              </div>
-              <div>${statusBadge}</div>
-            </div>
-
-            <div class="bg-white p-2.5 rounded-xl border border-slate-200 text-slate-700 space-y-1">
-              <div class="font-bold text-slate-800">الأصناف: <span class="font-normal text-slate-600">${itemsText}</span></div>
-              <div class="text-[11px] text-slate-500">عنوان التوصيل: ${o.address}</div>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
-              <div class="flex items-center gap-3">
-                <span class="font-black text-slate-900 text-sm">المجموع: ${Number(o.total).toFixed(2)} ج.م</span>
-                <span class="text-[11px] text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded">طريقة الدفع: ${o.paymentMethod || 'كاش'}</span>
-              </div>
-
-              <a href="https://wa.me/201121982368?text=مرحباً%20دكتور%20جورج%20عبده%2C%20أستفسر%20عن%20حالة%20طلبي%20رقم%20${o.id}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] flex items-center gap-1 transition-colors">
-                <i class="fa-brands fa-whatsapp text-xs"></i>
-                <span>استفسار واتساب</span>
-              </a>
-            </div>
-          </div>
-        `;
-      }).join('');
+      }).filter(Boolean).join('');
     }
 
     function addToCart(productId) {

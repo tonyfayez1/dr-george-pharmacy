@@ -246,7 +246,7 @@
               </div>
 
               <p class="text-xs text-slate-500 mb-4 leading-normal">
-                التقط صورة لروشتة الطبيب أو علبة الدواء بكاميرا هاتفك وسيتولى الدكتور جورج وفريق الصيدلية مراجعتها وتأكيدها وتوصيلها مجاناً.
+                التقط صورة لروشتة الطبيب أو علبة الدواء بكاميرا هاتفك وسيتولى الدكتور جورج وفريق الصيدلية مراجعتها وتأكيدها وتوصيلها .
               </p>
 
               <div onclick="openPrescriptionModal()" class="border-2 border-dashed border-brand-300 hover:border-brand-500 rounded-2xl p-6 text-center cursor-pointer bg-brand-50/40 hover:bg-brand-50/80 transition-all group">
@@ -387,7 +387,7 @@
           </div>
           <h3 class="text-base font-bold text-slate-800 mb-1">لم نعثر على هذا الصنف!</h3>
           <p class="text-xs text-slate-500 max-w-sm mx-auto mb-4">
-            لا تقلق، يمكنك تصوير علبة الدواء أو إرسال الروشتة وسيتولى الدكتور جورج عبده توفيرها لك وتوصيلها مجاناً.
+            لا تقلق، يمكنك تصوير علبة الدواء أو إرسال الروشتة وسيتولى الدكتور جورج عبده توفيرها لك وتوصيلها.
           </p>
           <button onclick="openPrescriptionModal()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow">
             <i class="fa-solid fa-camera ml-1"></i> اطلب بالروشتة فوراً
@@ -1753,14 +1753,14 @@
       whatsappMessage: 'مرحباً دكتور جورج عبده، أريد الاستفسار عن دواء',
       instapayNumber: '01121982368',
       instapayName: 'دكتور جورج عبده',
-      deliveryFeeText: 'مجاناً 100%',
+      deliveryFeeText: 'يحدد من ادارة الصيدلية',
       topAnnouncement: 'صيدلية دكتور جورج عبده (George Abdo) | خدمة دوائية ورعاية متكاملة 24 ساعة',
       heroHeadline: 'صيدلية دكتور جورج عبده',
       heroSubheadline: 'رعايتكم الصحية أمانتنا الأولى',
-      heroDescription: 'صرحكم الطبي المتكامل المجهز بقاعدة بيانات دوائية وتجميلية شاملة تضم كافة الأدوية والمستلزمات الطبية المعتمدة في مصر بأحدث الأسعار الرسمية. نوفر لك جميع احتياجاتك مع إمكانية التسوق كزائر مباشرة أو بإنشاء حساب، مع ميزة التوصيل المجاني والسريع بإشراف د. جورج عبده.',
+      heroDescription: 'صرحكم الطبي المتكامل المجهز بقاعدة بيانات دوائية وتجميلية شاملة تضم كافة الأدوية والمستلزمات الطبية المعتمدة في مصر بأحدث الأسعار الرسمية. نوفر لك جميع احتياجاتك مع إمكانية التسوق كزائر مباشرة أو بإنشاء حساب، مع ميزة التوصيل السريع بإشراف د. جورج عبده.',
       aboutTitle: 'خدمة طبية رائدة، أمانة مهنية، ورعاية حقيقية لصحة عائلتك',
       aboutText: 'تأسست صيدلية دكتور جورج عبده لتكون شريكك الصحي اليومي، مزودة بكافة أصناف السوق المصري وبأحدث الأسعار الرسمية المعتمدة. نلتزم بأعلى معايير الصيدلة الإكلينيكية لمراجعة الوصفات والتحقق من سلامة الجرعات، مع توفير البدائل الدوائية المطابقة علمياً عند الحاجة، وبخدمة توصيل فورية 100% بدون حد أدنى.',
-      deliveryNotice: 'تغطية شاملة وتوصيل فوري مجاني لكافة المناطق 24 ساعة'
+      deliveryNotice: 'تغطية شاملة وتوصيل فوري  لكافة مناطق الرحمانية قبلي 24 ساعة'
     };
 
     
@@ -2028,7 +2028,30 @@
               }
             }
           });
-
+// تحديث حالة الطلب لحظياً أمام العميل والصيدلي بمجرد تغييرها من لوحة التحكم
+          fbDb.ref('orders').on('child_changed', (snap) => {
+            const updated = snap.val();
+            const orderId = snap.key || (updated && updated.id);
+            if (updated && orderId) {
+              const orders = PharmacyDB.getOrders();
+              const idx = orders.findIndex(o => o && o.id === orderId);
+              if (idx > -1) {
+                orders[idx] = { ...orders[idx], ...updated, id: orderId };
+              } else {
+                orders.unshift({ ...updated, id: orderId });
+              }
+              localStorage.setItem('dr_george_orders', JSON.stringify(orders));
+              if (PharmacyDB.isAdminAuthenticated()) {
+                renderAdminKPIs();
+                renderAdminOrders();
+              }
+              // تحديث نافذة طلباتي للعميل تلقائياً في نفس اللحظة إن كانت مفتوحة
+              const myOrdersModal = document.getElementById('myOrdersModal');
+              if (myOrdersModal && !myOrdersModal.classList.contains('hidden')) {
+                searchMyOrdersByPhone();
+              }
+            }
+          });
           // 2. Listen for deleted orders live across all devices
           fbDb.ref('orders').on('child_removed', (snap) => {
             const delId = snap.key || (snap.val() && snap.val().id);
@@ -2222,7 +2245,7 @@
         if (!localStorage.getItem('dr_george_admin_creds')) {
           localStorage.setItem('dr_george_admin_creds', JSON.stringify({
             username: 'George Abdo',
-            password: '123DRGeorgeAbdo'
+            password: '123DRGEORGE'
           }));
         }
       },
@@ -2521,13 +2544,7 @@
       // Accept George Abdo, دكتور جورج عبده, دكتور جورج, admin, dr.george
       const validUsers = [
         'george abdo',
-        'george',
-        'دكتور جورج عبده',
-        'دكتور جورج',
-        'dr.george',
-        'dr george',
-        'dr. george abdo',
-        'admin'
+
       ];
 
       let creds = PharmacyDB.getAdminCreds();
@@ -2896,7 +2913,7 @@
       }
 
       noRes.classList.add('hidden');
-      countElem.innerText = `عرض ${items.length} منتجات متاحة للشحن المجاني الفوري`;
+      countElem.innerText = `عرض ${items.length} منتجات متاحة للشحن الفوري`;
 
       grid.innerHTML = items.map(p => `
         <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
@@ -3182,28 +3199,49 @@
     }
 
     // --- Customer Order Tracking & History (طلباتي) Logic ---
-    function openMyOrdersModal() {
+// --- Customer Order Tracking & History (طلباتي) Logic ---
+    async function openMyOrdersModal() {
       const cur = PharmacyDB.getCurrentCustomer();
       const phoneInput = document.getElementById('myOrdersPhoneSearch');
       if (cur && cur.phone && phoneInput) {
         phoneInput.value = cur.phone;
-        searchMyOrdersByPhone();
-      } else {
-        renderMyOrdersList([]);
       }
       document.getElementById('myOrdersModal').classList.remove('hidden');
+      await searchMyOrdersByPhone();
     }
 
     function closeMyOrdersModal() {
       document.getElementById('myOrdersModal').classList.add('hidden');
     }
 
-    function searchMyOrdersByPhone() {
-      const query = (document.getElementById('myOrdersPhoneSearch').value || '').trim().replace(/[^0-9]/g, '');
+    async function searchMyOrdersByPhone() {
+      const query = (document.getElementById('myOrdersPhoneSearch')?.value || '').trim().replace(/[^0-9]/g, '');
+      
+      // جلب أحدث بيانات الطلبات وحالاتها من سحابة Firebase مباشرة ليراها العميل فوراً
+      try {
+        const res = await fetch(`${CloudSync.getEndpoint()}/orders.json`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data === 'object') {
+            const cloudList = Object.entries(data).map(([k, v]) => {
+              if (v && typeof v === 'object') return { ...v, id: v.id || k };
+              return null;
+            }).filter(Boolean).filter(o => o && o.id !== 'ORD-101' && o.customerName !== 'محمد إبراهيم علي');
+            
+            cloudList.sort((a, b) => {
+              const da = a && a.date ? String(a.date) : '';
+              const db = b && b.date ? String(b.date) : '';
+              return db.localeCompare(da);
+            });
+            localStorage.setItem('dr_george_orders', JSON.stringify(cloudList));
+          }
+        }
+      } catch (e) {}
+
       const orders = PharmacyDB.getOrders();
 
       if (!query) {
-        renderMyOrdersList(orders.slice(0, 5)); // Show recent orders if blank
+        renderMyOrdersList(orders.slice(0, 5)); // عرض آخر الطلبات إذا كان البحث فارغاً
         return;
       }
 
@@ -3218,7 +3256,7 @@
     function renderMyOrdersList(ordersList) {
       const container = document.getElementById('myOrdersListContainer');
       const emptyState = document.getElementById('myOrdersEmptyState');
-      if (!container || !emptyState) return;
+      if (!container || !ejmptyState) return;
 
       if (!ordersList || ordersList.length === 0) {
         container.innerHTML = '';
@@ -3318,11 +3356,11 @@
       const deliveryFee = PharmacyDB.getDeliveryFee();
       const delivBanner = document.getElementById('cartDeliveryFeeBanner');
       if (delivBanner) {
-        delivBanner.innerText = deliveryFee === 0 ? 'مجاناً (0.00 ج.م)' : `${deliveryFee.toFixed(2)} ج.م`;
+        delivBanner.innerText = deliveryFee === 0 ? 'يححده ادارة الصيدلية' : `${deliveryFee.toFixed(2)} ج.م`;
       }
       const delivElem = document.getElementById('cartDeliveryFee');
       if (delivElem) {
-        delivElem.innerText = deliveryFee === 0 ? 'مجاناً' : `${deliveryFee.toFixed(2)} ج.م`;
+        delivElem.innerText = deliveryFee === 0 ? 'يححده ادارة الصيدلية' : `${deliveryFee.toFixed(2)} ج.م`;
       }
 
       if (cart.length === 0) {
@@ -3446,7 +3484,7 @@
       updateCartUI();
       closeCheckoutModal();
 
-      showToast(`تم إرسال طلبك بنجاح (${newOrder.id})! سيتواصل معك صيدلي د. جورج عبده فوراً لتأكيد التوصيل المجاني.`);
+      showToast(`تم إرسال طلبك بنجاح (${newOrder.id})! سيتواصل معك صيدلي د. جورج عبده فوراً لتأكيد التوصيل .`);
     }
 
     // Prescription Modal Actions
@@ -3673,7 +3711,7 @@
       setVal('settingWhatsappMsg', s.whatsappMessage);
       setVal('settingInstapayNumber', s.instapayNumber);
       setVal('settingInstapayName', s.instapayName);
-      setVal('settingDeliveryFeeText', s.deliveryFeeText || 'مجاناً 100%');
+      setVal('settingDeliveryFeeText', s.deliveryFeeText || ' يححده ادارة الصيدلية');
       setVal('settingTopAnnouncement', s.topAnnouncement);
       setVal('settingHeroHeadline', s.heroHeadline);
       setVal('settingHeroSubheadline', s.heroSubheadline);

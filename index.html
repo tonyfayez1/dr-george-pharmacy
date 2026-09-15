@@ -3312,8 +3312,14 @@
     // --- Customer Order Tracking & History (طلباتي) Logic ---
 // --- Customer Order Tracking & History (طلباتي) Logic ---
     function cleanPhoneNumberForSearch(p) {
-      let c = String(p || '').replace(/[^0-9]/g, '');
-      if (c.startsWith('20') && c.length > 10) c = c.slice(2);
+      if (!p) return '';
+      // 1. تحويل الأرقام المشرقية (٠-٩) إلى أرقام (0-9)
+      let str = String(p).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+      // 2. إزالة أي مسافات أو رموز غير رقمية
+      let c = str.replace(/[^0-9]/g, '');
+      // 3. إزالة كود مصر الدولي والصفر من البداية لتوحيد المقارنة
+      if (c.startsWith('0020')) c = c.slice(4);
+      else if (c.startsWith('20') && c.length > 10) c = c.slice(2);
       if (c.startsWith('0')) c = c.slice(1);
       return c;
     }
@@ -3321,8 +3327,9 @@
     async function openMyOrdersModal() {
       const cur = PharmacyDB.getCurrentCustomer();
       const phoneInput = document.getElementById('myOrdersPhoneSearch');
-      if (cur && (cur.phone || cur.contact) && phoneInput) {
-        phoneInput.value = cur.phone || cur.contact;
+      const savedPhone = (cur && (cur.phone || cur.contact)) || localStorage.getItem('dr_george_last_order_phone') || '';
+      if (phoneInput && !phoneInput.value.trim() && savedPhone) {
+        phoneInput.value = savedPhone;
       }
       document.getElementById('myOrdersModal').classList.remove('hidden');
       searchMyOrdersByPhone();
@@ -3338,32 +3345,64 @@
       const queryPhone = cleanPhoneNumberForSearch(rawQuery);
 
       function doFilterAndRender() {
-        const rawOrders = PharmacyDB.getOrders();
-        const orders = Array.isArray(rawOrders) ? rawOrders.filter(Boolean) : [];
+        const container = document.getElementById('myOrdersListContainer');
+        const emptyState = document.getElementById('myOrdersEmptyState');
+        if (!container || !emptyState) return;
 
+        // إذا لم يُدخل العميل رقم هاتف بعد: منع عرض أي طلبات لحفظ الخصوصية
         if (!rawQuery) {
-          renderMyOrdersList(orders.slice(0, 5)); // عرض آخر 5 طلبات إذا كان البحث فارغاً
+          emptyState.classList.add('hidden');
+          container.innerHTML = `
+            <div class="text-center py-10 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200 p-6">
+              <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+              </div>
+              <h4 class="text-sm font-black text-slate-700 mb-1.5">أدخل رقم هاتفك لعرض طلباتك</h4>
+              <p class="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                اكتب رقم الموبايل الذي قمت بعمل الطلب به في الحقل أعلاه واضغط على <strong>بحث</strong> لعرض وتتبع مشترياتك الخاصة فقط.
+              </p>
+            </div>
+          `;
           return;
         }
+
+        const rawOrders = PharmacyDB.getOrders();
+        const orders = Array.isArray(rawOrders) ? rawOrders.filter(Boolean) : [];
 
         const filtered = orders.filter(o => {
           if (!o || typeof o !== 'object') return false;
           const oPhone = cleanPhoneNumberForSearch(o.phone);
-          const custName = String(o.customerName || '');
-          const orderId = String(o.id || '');
+          const orderId = String(o.id || '').trim().toLowerCase();
+          const cleanQueryRaw = rawQuery.toLowerCase();
 
-          return (queryPhone && oPhone && (oPhone.includes(queryPhone) || queryPhone.includes(oPhone))) 
-                 || custName.includes(rawQuery) 
-                 || orderId.toLowerCase().includes(rawQuery.toLowerCase());
+          // 1. مطابقة دقيقة برقم هاتف العميل فقط
+          const phoneMatch = queryPhone.length >= 6 && oPhone && (
+            oPhone === queryPhone || 
+            oPhone.endsWith(queryPhone) || 
+            queryPhone.endsWith(oPhone)
+          );
+
+          // 2. أو مطابقة برقم الطلب المحدد إذا بحث العميل بكود الطلب (مثل ORD-303)
+          const orderIdMatch = cleanQueryRaw.length >= 3 && (
+            orderId === cleanQueryRaw || 
+            orderId.includes(cleanQueryRaw)
+          );
+
+          return phoneMatch || orderIdMatch;
         });
+
+        // حفظ الرقم لتسهيل فتحه تلقائياً للعميل مستقبلاً
+        if (queryPhone.length >= 8) {
+          try { localStorage.setItem('dr_george_last_order_phone', rawQuery); } catch (e) {}
+        }
 
         renderMyOrdersList(filtered);
       }
 
-      // 1. استجابة فورية بدون أي تأخير (0 ملي ثانية) من الذاكرة
+      // 1. استجابة فورية سريعة من الذاكرة المحلية
       doFilterAndRender();
 
-      // 2. تحديث متزامن في الخلفية من سحابة Firebase
+      // 2. تحديث متزامن في الخلفية من Firebase
       try {
         const res = await fetch(`${CloudSync.getEndpoint()}/orders.json`);
         if (res.ok) {
@@ -3381,7 +3420,7 @@
             });
 
             localStorage.setItem('dr_george_orders', JSON.stringify(cloudList));
-            doFilterAndRender(); // إعادة العرض بالبيانات السحابية المحدثة
+            doFilterAndRender();
           }
         }
       } catch (e) {}
@@ -3426,7 +3465,6 @@
             statusBadge = `<span class="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-bold text-[11px]">${orderStatus}</span>`;
           }
 
-          // معالجة الأصناف بأمان تام سواء كانت Array أو Object من Firebase
           let itemsList = [];
           if (Array.isArray(o.items)) {
             itemsList = o.items.filter(Boolean);
@@ -3469,7 +3507,7 @@
             </div>
           `;
         } catch (err) {
-          console.error("Error rendering customer order row:", err);
+          console.error('Error rendering customer order row:', err);
           return '';
         }
       }).filter(Boolean).join('');

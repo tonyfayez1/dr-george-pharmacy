@@ -3311,15 +3311,21 @@
 
     // --- Customer Order Tracking & History (طلباتي) Logic ---
 // --- Customer Order Tracking & History (طلباتي) Logic ---
-// --- Customer Order Tracking & History (طلباتي) Logic ---
+    function cleanPhoneNumberForSearch(p) {
+      let c = String(p || '').replace(/[^0-9]/g, '');
+      if (c.startsWith('20') && c.length > 10) c = c.slice(2);
+      if (c.startsWith('0')) c = c.slice(1);
+      return c;
+    }
+
     async function openMyOrdersModal() {
       const cur = PharmacyDB.getCurrentCustomer();
       const phoneInput = document.getElementById('myOrdersPhoneSearch');
-      if (cur && cur.phone && phoneInput) {
-        phoneInput.value = cur.phone;
+      if (cur && (cur.phone || cur.contact) && phoneInput) {
+        phoneInput.value = cur.phone || cur.contact;
       }
       document.getElementById('myOrdersModal').classList.remove('hidden');
-      await searchMyOrdersByPhone();
+      searchMyOrdersByPhone();
     }
 
     function closeMyOrdersModal() {
@@ -3328,9 +3334,36 @@
 
     async function searchMyOrdersByPhone() {
       const searchInput = document.getElementById('myOrdersPhoneSearch');
-      const query = String(searchInput ? searchInput.value : '').trim().replace(/[^0-9]/g, '');
-      
-      // جلب أحدث بيانات الطلبات فوراً من السحابة ليراها العميل بالحالة المحدثة
+      const rawQuery = String(searchInput ? searchInput.value : '').trim();
+      const queryPhone = cleanPhoneNumberForSearch(rawQuery);
+
+      function doFilterAndRender() {
+        const rawOrders = PharmacyDB.getOrders();
+        const orders = Array.isArray(rawOrders) ? rawOrders.filter(Boolean) : [];
+
+        if (!rawQuery) {
+          renderMyOrdersList(orders.slice(0, 5)); // عرض آخر 5 طلبات إذا كان البحث فارغاً
+          return;
+        }
+
+        const filtered = orders.filter(o => {
+          if (!o || typeof o !== 'object') return false;
+          const oPhone = cleanPhoneNumberForSearch(o.phone);
+          const custName = String(o.customerName || '');
+          const orderId = String(o.id || '');
+
+          return (queryPhone && oPhone && (oPhone.includes(queryPhone) || queryPhone.includes(oPhone))) 
+                 || custName.includes(rawQuery) 
+                 || orderId.toLowerCase().includes(rawQuery.toLowerCase());
+        });
+
+        renderMyOrdersList(filtered);
+      }
+
+      // 1. استجابة فورية بدون أي تأخير (0 ملي ثانية) من الذاكرة
+      doFilterAndRender();
+
+      // 2. تحديث متزامن في الخلفية من سحابة Firebase
       try {
         const res = await fetch(`${CloudSync.getEndpoint()}/orders.json`);
         if (res.ok) {
@@ -3340,34 +3373,18 @@
               if (v && typeof v === 'object') return { ...v, id: v.id || k };
               return null;
             }).filter(Boolean).filter(o => o && o.id !== 'ORD-101' && o.customerName !== 'محمد إبراهيم علي');
-            
+
             cloudList.sort((a, b) => {
               const da = a && a.date ? String(a.date) : '';
               const db = b && b.date ? String(b.date) : '';
               return db.localeCompare(da);
             });
+
             localStorage.setItem('dr_george_orders', JSON.stringify(cloudList));
+            doFilterAndRender(); // إعادة العرض بالبيانات السحابية المحدثة
           }
         }
       } catch (e) {}
-
-      const rawOrders = PharmacyDB.getOrders();
-      const orders = Array.isArray(rawOrders) ? rawOrders.filter(Boolean) : [];
-
-      if (!query) {
-        renderMyOrdersList(orders.slice(0, 5)); // عرض آخر 5 طلبات إذا كان حقل البحث فارغاً
-        return;
-      }
-
-      const filtered = orders.filter(o => {
-        if (!o || typeof o !== 'object') return false;
-        const cleanPhone = String(o.phone || '').replace(/[^0-9]/g, '');
-        const custName = String(o.customerName || '');
-        const orderId = String(o.id || '');
-        return (cleanPhone && cleanPhone.includes(query)) || custName.includes(query) || orderId.includes(query);
-      });
-
-      renderMyOrdersList(filtered);
     }
 
     function renderMyOrdersList(ordersList) {
@@ -3409,7 +3426,7 @@
             statusBadge = `<span class="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-bold text-[11px]">${orderStatus}</span>`;
           }
 
-          // معالجة الأصناف سواء كانت Array أو Object قادمة من Firebase بأمان تام
+          // معالجة الأصناف بأمان تام سواء كانت Array أو Object من Firebase
           let itemsList = [];
           if (Array.isArray(o.items)) {
             itemsList = o.items.filter(Boolean);
@@ -3417,7 +3434,10 @@
             itemsList = Object.values(o.items).filter(Boolean);
           }
           const itemsText = itemsList.length > 0
-            ? itemsList.map(i => `${i.name || 'صنف'} (×${i.qty || 1})`).join('، ')
+            ? itemsList.map(i => {
+                if (typeof i === 'string') return i;
+                return `${i.name || 'صنف'} (×${i.qty || 1})`;
+              }).join('، ')
             : 'أدوية ومستلزمات';
 
           return `
@@ -3454,7 +3474,6 @@
         }
       }).filter(Boolean).join('');
     }
-
     function addToCart(productId) {
       const product = PharmacyDB.getMedicines().find(p => p.id == productId);
       if (!product) return;

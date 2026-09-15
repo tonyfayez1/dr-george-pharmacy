@@ -1733,7 +1733,118 @@
     <span id="toastText" class="flex-1 font-bold"></span>
   </div>
 
+<!-- ========================================================================= -->
+  <!-- MODAL: ADMIN ORDER DETAILS & COMMENTS (تفاصيل الأصناف والتعليقات للأدمن)   -->
+  <!-- ========================================================================= -->
+  <div id="adminOrderDetailModal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+    <div class="min-h-screen px-4 flex items-center justify-center py-6">
+      <!-- Backdrop -->
+      <div onclick="closeAdminOrderDetailModal()" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"></div>
 
+      <!-- Modal Card -->
+      <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative z-10 border border-slate-200 text-xs animate-in fade-in zoom-in-95 space-y-4">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center font-bold text-base shadow-sm">
+              <i class="fa-solid fa-receipt"></i>
+            </div>
+            <div>
+              <h3 id="orderModalTitle" class="font-black text-slate-900 text-sm">تفاصيل الطلب</h3>
+              <p id="orderModalDate" class="text-[11px] text-slate-400 font-mono"></p>
+            </div>
+          </div>
+          <button type="button" onclick="closeAdminOrderDetailModal()" class="text-slate-400 hover:text-slate-600 p-1">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- Customer Info Box -->
+        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-1.5 text-xs">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5 font-bold text-slate-800">
+              <i class="fa-solid fa-user text-brand-600"></i>
+              <span id="orderModalCustomer"></span>
+            </div>
+            <div id="orderModalStatusBadge"></div>
+          </div>
+          <div class="flex items-center gap-2 text-slate-600">
+            <i class="fa-solid fa-phone text-brand-600 text-[11px]"></i>
+            <span id="orderModalPhone" class="font-mono font-bold"></span>
+            <span id="orderModalWhatsAppBtn"></span>
+          </div>
+          <div class="flex items-start gap-1.5 text-slate-600">
+            <i class="fa-solid fa-location-dot text-brand-600 text-[11px] mt-0.5"></i>
+            <span id="orderModalAddress" class="leading-relaxed"></span>
+          </div>
+        </div>
+
+        <!-- Items Table -->
+        <div>
+          <h4 class="font-extrabold text-slate-800 text-xs mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-pills text-brand-600"></i>
+            <span>قائمة الأصناف المطلوبة والكميات:</span>
+          </h4>
+          <div class="border border-slate-200 rounded-2xl overflow-hidden bg-white max-h-48 overflow-y-auto">
+            <table class="w-full text-right text-xs">
+              <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                <tr>
+                  <th class="p-2.5">اسم الصنف</th>
+                  <th class="p-2.5 text-center">الكمية</th>
+                  <th class="p-2.5 text-center">سعر الوحدة</th>
+                  <th class="p-2.5 text-left">المجموع</th>
+                </tr>
+              </thead>
+              <tbody id="orderModalItemsBody" class="divide-y divide-slate-100 font-medium"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Customer Notes / Comments Box -->
+        <div class="p-3 bg-amber-50/80 border border-amber-200/80 rounded-2xl text-xs space-y-1">
+          <span class="font-extrabold text-amber-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-comment-dots text-amber-600"></i>
+            <span>ملاحظات وتعليقات العميل:</span>
+          </span>
+          <p id="orderModalNotes" class="text-amber-950 font-medium text-[11px] leading-relaxed bg-white/80 p-2.5 rounded-xl border border-amber-200/60"></p>
+        </div>
+
+        <!-- Financial Breakdown -->
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5 text-xs text-slate-600 font-semibold">
+          <div class="flex justify-between">
+            <span>طريقة الدفع:</span>
+            <span id="orderModalPaymentMethod" class="font-bold text-slate-800"></span>
+          </div>
+          <div class="flex justify-between">
+            <span>رسوم التوصيل:</span>
+            <span id="orderModalDeliveryFee" class="font-bold text-slate-800"></span>
+          </div>
+          <div class="flex justify-between text-sm font-black text-slate-900 pt-1.5 border-t border-slate-200">
+            <span>المجموع النهائي:</span>
+            <span id="orderModalGrandTotal" class="text-brand-700 text-base font-black"></span>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2 pt-2">
+          <div class="flex-1 flex items-center gap-1.5">
+            <span class="font-bold text-slate-700 whitespace-nowrap">تغيير الحالة:</span>
+            <select id="orderModalStatusSelect" onchange="updateStatusFromModal()" class="w-full p-2 bg-white border border-slate-300 rounded-xl text-xs font-bold focus:outline-none focus:border-brand-500">
+              <option value="قيد المراجعة">قيد المراجعة</option>
+              <option value="جاري التجهيز">جاري التجهيز</option>
+              <option value="تم التوصيل">تم التوصيل</option>
+              <option value="ملغي">ملغي</option>
+            </select>
+          </div>
+          <button type="button" onclick="closeAdminOrderDetailModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer">
+            إغلاق
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
   <!-- ========================================================================= -->
   <!-- 7. APPLICATION LOGIC, DATA LAYER & AUTHENTICATION                         -->
   <!-- ========================================================================= -->
@@ -4058,8 +4169,15 @@
                   ${cleanPhone ? `<a href="tel:${rawPhone}" class="hover:text-brand-600 underline font-mono">${rawPhone}</a>` : '<span class="text-slate-400">غير محدد</span>'}
                 </td>
                 <td class="p-3 text-slate-600 max-w-xs font-medium truncate" title="${orderAddress}">${orderAddress}</td>
-                <td class="p-3 text-slate-500 max-w-xs truncate" title="${itemsSummary}">${itemsSummary}</td>
-                <td class="p-3 font-black text-slate-900 whitespace-nowrap">${totalFormatted} ج.م</td>
+<td class="p-3 max-w-xs">
+  <div class="flex items-center gap-2">
+    <span class="truncate text-slate-700 font-medium max-w-[130px] inline-block" title="${itemsSummary}">${itemsSummary}</span>
+    <button type="button" onclick="openAdminOrderDetailModal('${orderId}')" class="shrink-0 bg-brand-50 hover:bg-brand-600 text-brand-700 hover:text-white border border-brand-200 hover:border-transparent px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shadow-sm cursor-pointer" title="عرض تفاصيل الأصناف والتعليقات">
+      <i class="fa-solid fa-file-lines text-xs"></i>
+      <span>التفاصيل</span>
+    </button>
+  </div>
+</td>                <td class="p-3 font-black text-slate-900 whitespace-nowrap">${totalFormatted} ج.م</td>
                 <td class="p-3 font-bold text-xs whitespace-nowrap">
                   ${isInstapay ? '<span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-[10px]">⚡ إنستاباي</span>' : '<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-[10px]">💵 كاش</span>'}
                 </td>
@@ -4579,7 +4697,115 @@
         toast.classList.add('translate-y-24', 'opacity-0');
       }, 4000);
     }
-  
+  // --- Admin Order Details & Comments Modal Functions ---
+    let currentAdminViewingOrderId = null;
+
+    function openAdminOrderDetailModal(orderId) {
+      const orders = PharmacyDB.getOrders();
+      const order = orders.find(o => o && o.id === orderId);
+      if (!order) {
+        showToast("لم يتم العثور على بيانات هذا الطلب!");
+        return;
+      }
+
+      currentAdminViewingOrderId = orderId;
+
+      // 1. تعبئة بيانات العميل والهيدر
+      document.getElementById('orderModalTitle').innerText = `طلب رقم: ${order.id}`;
+      document.getElementById('orderModalDate').innerText = order.date || '';
+      document.getElementById('orderModalCustomer').innerText = order.customerName || 'عميل نقدي';
+      document.getElementById('orderModalPhone').innerText = order.phone || 'غير محدد';
+      document.getElementById('orderModalAddress').innerText = order.address || 'استلام من الصيدلية';
+
+      // زر واتساب السريع
+      const cleanPhone = String(order.phone || '').replace(/[^0-9]/g, '');
+      const waContainer = document.getElementById('orderModalWhatsAppBtn');
+      if (cleanPhone) {
+        waContainer.innerHTML = `
+          <a href="https://wa.me/20${cleanPhone}?text=${encodeURIComponent('مرحباً ' + (order.customerName || '') + '، معك صيدلية دكتور جورج عبده بخصوص طلبك رقم ' + order.id)}" target="_blank" class="px-2 py-0.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-md text-[10px] font-bold inline-flex items-center gap-1 transition-colors">
+            <i class="fa-brands fa-whatsapp"></i> واتساب
+          </a>
+        `;
+      } else {
+        waContainer.innerHTML = '';
+      }
+
+      // شارة الحالة
+      const statusBadge = document.getElementById('orderModalStatusBadge');
+      const st = order.status || 'قيد المراجعة';
+      if (st === 'قيد المراجعة') statusBadge.innerHTML = '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold text-[10px]">قيد المراجعة</span>';
+      else if (st === 'جاري التجهيز') statusBadge = '<span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold text-[10px]">جاري التجهيز</span>';
+      else if (st === 'تم التوصيل') statusBadge = '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold text-[10px]">تم التوصيل</span>';
+      else statusBadge.innerHTML = `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-bold text-[10px]">${st}</span>`;
+
+      // القائمة المنسدلة لتغيير الحالة
+      const select = document.getElementById('orderModalStatusSelect');
+      if (select) select.value = st;
+
+      // 2. تعبئة جدول الأصناف والكميات
+      const tbody = document.getElementById('orderModalItemsBody');
+      let itemsList = [];
+      if (Array.isArray(order.items)) {
+        itemsList = order.items.filter(Boolean);
+      } else if (order.items && typeof order.items === 'object') {
+        itemsList = Object.values(order.items).filter(Boolean);
+      }
+
+      if (itemsList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-slate-400">لا توجد تفاصيل أصناف</td></tr>';
+      } else {
+        tbody.innerHTML = itemsList.map(item => {
+          const price = Number(item.price || 0);
+          const qty = Number(item.qty || 1);
+          const itemTotal = (price * qty).toFixed(2);
+          return `
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="p-2.5 font-bold text-slate-800">${item.name || 'صنف'}</td>
+              <td class="p-2.5 text-center font-bold text-brand-700 font-mono">×${qty}</td>
+              <td class="p-2.5 text-center text-slate-500 font-mono">${price.toFixed(2)} ج.م</td>
+              <td class="p-2.5 text-left font-black text-slate-900 font-mono">${itemTotal} ج.م</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // 3. عرض ملاحظات وتعليقات العميل
+      const notesEl = document.getElementById('orderModalNotes');
+      if (order.notes && order.notes.trim()) {
+        notesEl.innerText = order.notes.trim();
+      } else {
+        notesEl.innerHTML = '<span class="text-slate-400 italic">لا توجد أي ملاحظات أو تعليقات إضافية من العميل على هذا الطلب.</span>';
+      }
+
+      // 4. الحسابات المالية
+      const delivFee = Number(order.deliveryFee !== undefined ? order.deliveryFee : PharmacyDB.getDeliveryFee());
+      const grandTotal = Number(order.total !== undefined ? order.total : (order.subtotal || 0));
+      document.getElementById('orderModalDeliveryFee').innerText = delivFee === 0 ? 'مجاناً' : `${delivFee.toFixed(2)} ج.م`;
+      document.getElementById('orderModalGrandTotal').innerText = `${grandTotal.toFixed(2)} ج.م`;
+      document.getElementById('orderModalPaymentMethod').innerText = order.paymentMethod || 'كاش عند الاستلام';
+
+      // فتح النافذة
+      document.getElementById('adminOrderDetailModal').classList.remove('hidden');
+    }
+
+    function closeAdminOrderDetailModal() {
+      const modal = document.getElementById('adminOrderDetailModal');
+      if (modal) modal.classList.add('hidden');
+      currentAdminViewingOrderId = null;
+    }
+
+    function updateStatusFromModal() {
+      if (!currentAdminViewingOrderId) return;
+      const newStatus = document.getElementById('orderModalStatusSelect').value;
+      changeOrderStatus(currentAdminViewingOrderId, newStatus);
+      
+      // تحديث الشارة داخل المودال نفسه فوراً
+      const statusBadge = document.getElementById('orderModalStatusBadge');
+      if (newStatus === 'قيد المراجعة') statusBadge.innerHTML = '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold text-[10px]">قيد المراجعة</span>';
+      else if (newStatus === 'جاري التجهيز') statusBadge = '<span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold text-[10px]">جاري التجهيز</span>';
+      else if (newStatus === 'تم التوصيل') statusBadge = '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold text-[10px]">تم التوصيل</span>';
+      else statusBadge.innerHTML = `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-bold text-[10px]">${newStatus}</span>`;
+    }
   </script>
 </body>
 </html>

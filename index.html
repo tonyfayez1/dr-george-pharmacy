@@ -12,7 +12,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
-  <!-- Google Fonts: -->
+  <!-- Google Fonts: Cairo -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['qena', 'sans-serif'],
+            sans: ['Cairo', 'sans-serif'],
           },
           colors: {
             brand: {
@@ -41,7 +41,7 @@
   </script>
   <style>
     body {
-      font-family: 'qena', sans-serif;
+      font-family: 'Cairo', sans-serif;
     }
     .custom-scrollbar::-webkit-scrollbar {
       width: 6px;
@@ -77,7 +77,7 @@
         <span class="bg-brand-600 px-2 py-0.5 rounded font-bold text-[11px]">
           <i class="fa-solid fa-truck-fast ml-1"></i> ميزة حصرية
         </span>
-        <span id="siteTopAnnouncement" class="font-bold">صيدلية دكتور جورج عبده (George Abdo) | خدمة دوائية ورعاية متكامل 24 ساعة</span>
+        <span id="siteTopAnnouncement" class="font-bold">صيدلية دكتور جورج عبده (George Abdo) | خدمة دوائية ورعاية متكاملة 24 ساعة</span>
       </div>
       <div class="flex items-center space-x-reverse space-x-4 text-xs">
         <span><i class="fa-solid fa-phone ml-1 text-brand-300"></i> <span id="siteTopPhone">الخط الساخن والموبايل: 01121982368</span></span>
@@ -246,7 +246,7 @@
               </div>
 
               <p class="text-xs text-slate-500 mb-4 leading-normal">
-                التقط صورة لروشتة الطبيب أو علبة الدواء بكاميرا هاتفك وسيتولى الدكتور جورج وفريق الصيدلية مراجعتها وتأكيدها وتوصيلها .
+                التقط صورة لروشتة الطبيب أو علبة الدواء بكاميرا هاتفك وسيتولى الدكتور جورج وفريق الصيدلية مراجعتها وتأكيدها وتوصيلها مجاناً.
               </p>
 
               <div onclick="openPrescriptionModal()" class="border-2 border-dashed border-brand-300 hover:border-brand-500 rounded-2xl p-6 text-center cursor-pointer bg-brand-50/40 hover:bg-brand-50/80 transition-all group">
@@ -387,7 +387,7 @@
           </div>
           <h3 class="text-base font-bold text-slate-800 mb-1">لم نعثر على هذا الصنف!</h3>
           <p class="text-xs text-slate-500 max-w-sm mx-auto mb-4">
-            لا تقلق، يمكنك تصوير علبة الدواء أو إرسال الروشتة وسيتولى الدكتور جورج عبده توفيرها لك وتوصيلها.
+            لا تقلق، يمكنك تصوير علبة الدواء أو إرسال الروشتة وسيتولى الدكتور جورج عبده توفيرها لك وتوصيلها مجاناً.
           </p>
           <button onclick="openPrescriptionModal()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow">
             <i class="fa-solid fa-camera ml-1"></i> اطلب بالروشتة فوراً
@@ -1614,6 +1614,7 @@
             </div>
 
             <p id="detailModalDesc" class="text-xs text-slate-600 leading-relaxed max-h-24 overflow-y-auto custom-scrollbar pt-1"></p>
+            <div id="detailModalStockInfo" class="mt-2 text-xs font-bold flex items-center gap-1.5"></div>
           </div>
         </div>
 
@@ -1670,7 +1671,7 @@
         <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 mb-4 text-xs">
           <label class="block font-bold text-slate-700 mb-1.5">عرض الطلبات برقم الهاتف:</label>
           <div class="flex gap-2">
-            <input type="tel" id="myOrdersPhoneSearch" placeholder="أدخل رقم هاتفك المسجل به الطلب (01xxxxxxxxx)" class="flex-1 p-2 bg-white rounded-xl border border-slate-300 focus:border-brand-500 focus:outline-none">
+            <input type="tel" id="myOrdersPhoneSearch" onkeyup="if(event.key==='Enter') searchMyOrdersByPhone()" placeholder="أدخل رقم هاتفك المسجل به الطلب (01xxxxxxxxx)" class="flex-1 p-2 bg-white rounded-xl border border-slate-300 focus:border-brand-500 focus:outline-none">
             <button type="button" onclick="searchMyOrdersByPhone()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2 rounded-xl transition-colors shrink-0">
               <i class="fa-solid fa-magnifying-glass ml-1"></i> بحث
             </button>
@@ -1733,118 +1734,7 @@
     <span id="toastText" class="flex-1 font-bold"></span>
   </div>
 
-<!-- ========================================================================= -->
-  <!-- MODAL: ADMIN ORDER DETAILS & COMMENTS (تفاصيل الأصناف والتعليقات للأدمن)   -->
-  <!-- ========================================================================= -->
-  <div id="adminOrderDetailModal" class="fixed inset-0 z-50 overflow-y-auto hidden">
-    <div class="min-h-screen px-4 flex items-center justify-center py-6">
-      <!-- Backdrop -->
-      <div onclick="closeAdminOrderDetailModal()" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"></div>
 
-      <!-- Modal Card -->
-      <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative z-10 border border-slate-200 text-xs animate-in fade-in zoom-in-95 space-y-4">
-        
-        <!-- Header -->
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center font-bold text-base shadow-sm">
-              <i class="fa-solid fa-receipt"></i>
-            </div>
-            <div>
-              <h3 id="orderModalTitle" class="font-black text-slate-900 text-sm">تفاصيل الطلب</h3>
-              <p id="orderModalDate" class="text-[11px] text-slate-400 font-mono"></p>
-            </div>
-          </div>
-          <button type="button" onclick="closeAdminOrderDetailModal()" class="text-slate-400 hover:text-slate-600 p-1">
-            <i class="fa-solid fa-xmark text-lg"></i>
-          </button>
-        </div>
-
-        <!-- Customer Info Box -->
-        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-1.5 text-xs">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-1.5 font-bold text-slate-800">
-              <i class="fa-solid fa-user text-brand-600"></i>
-              <span id="orderModalCustomer"></span>
-            </div>
-            <div id="orderModalStatusBadge"></div>
-          </div>
-          <div class="flex items-center gap-2 text-slate-600">
-            <i class="fa-solid fa-phone text-brand-600 text-[11px]"></i>
-            <span id="orderModalPhone" class="font-mono font-bold"></span>
-            <span id="orderModalWhatsAppBtn"></span>
-          </div>
-          <div class="flex items-start gap-1.5 text-slate-600">
-            <i class="fa-solid fa-location-dot text-brand-600 text-[11px] mt-0.5"></i>
-            <span id="orderModalAddress" class="leading-relaxed"></span>
-          </div>
-        </div>
-
-        <!-- Items Table -->
-        <div>
-          <h4 class="font-extrabold text-slate-800 text-xs mb-2 flex items-center gap-1.5">
-            <i class="fa-solid fa-pills text-brand-600"></i>
-            <span>قائمة الأصناف المطلوبة والكميات:</span>
-          </h4>
-          <div class="border border-slate-200 rounded-2xl overflow-hidden bg-white max-h-48 overflow-y-auto">
-            <table class="w-full text-right text-xs">
-              <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                <tr>
-                  <th class="p-2.5">اسم الصنف</th>
-                  <th class="p-2.5 text-center">الكمية</th>
-                  <th class="p-2.5 text-center">سعر الوحدة</th>
-                  <th class="p-2.5 text-left">المجموع</th>
-                </tr>
-              </thead>
-              <tbody id="orderModalItemsBody" class="divide-y divide-slate-100 font-medium"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Customer Notes / Comments Box -->
-        <div class="p-3 bg-amber-50/80 border border-amber-200/80 rounded-2xl text-xs space-y-1">
-          <span class="font-extrabold text-amber-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-comment-dots text-amber-600"></i>
-            <span>ملاحظات وتعليقات العميل:</span>
-          </span>
-          <p id="orderModalNotes" class="text-amber-950 font-medium text-[11px] leading-relaxed bg-white/80 p-2.5 rounded-xl border border-amber-200/60"></p>
-        </div>
-
-        <!-- Financial Breakdown -->
-        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5 text-xs text-slate-600 font-semibold">
-          <div class="flex justify-between">
-            <span>طريقة الدفع:</span>
-            <span id="orderModalPaymentMethod" class="font-bold text-slate-800"></span>
-          </div>
-          <div class="flex justify-between">
-            <span>رسوم التوصيل:</span>
-            <span id="orderModalDeliveryFee" class="font-bold text-slate-800"></span>
-          </div>
-          <div class="flex justify-between text-sm font-black text-slate-900 pt-1.5 border-t border-slate-200">
-            <span>المجموع النهائي:</span>
-            <span id="orderModalGrandTotal" class="text-brand-700 text-base font-black"></span>
-          </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="flex items-center gap-2 pt-2">
-          <div class="flex-1 flex items-center gap-1.5">
-            <span class="font-bold text-slate-700 whitespace-nowrap">تغيير الحالة:</span>
-            <select id="orderModalStatusSelect" onchange="updateStatusFromModal()" class="w-full p-2 bg-white border border-slate-300 rounded-xl text-xs font-bold focus:outline-none focus:border-brand-500">
-              <option value="قيد المراجعة">قيد المراجعة</option>
-              <option value="جاري التجهيز">جاري التجهيز</option>
-              <option value="تم التوصيل">تم التوصيل</option>
-              <option value="ملغي">ملغي</option>
-            </select>
-          </div>
-          <button type="button" onclick="closeAdminOrderDetailModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer">
-            إغلاق
-          </button>
-        </div>
-
-      </div>
-    </div>
-  </div>
   <!-- ========================================================================= -->
   <!-- 7. APPLICATION LOGIC, DATA LAYER & AUTHENTICATION                         -->
   <!-- ========================================================================= -->
@@ -1864,14 +1754,14 @@
       whatsappMessage: 'مرحباً دكتور جورج عبده، أريد الاستفسار عن دواء',
       instapayNumber: '01121982368',
       instapayName: 'دكتور جورج عبده',
-      deliveryFeeText: 'يحدد من ادارة الصيدلية',
+      deliveryFeeText: 'مجاناً 100%',
       topAnnouncement: 'صيدلية دكتور جورج عبده (George Abdo) | خدمة دوائية ورعاية متكاملة 24 ساعة',
       heroHeadline: 'صيدلية دكتور جورج عبده',
       heroSubheadline: 'رعايتكم الصحية أمانتنا الأولى',
-      heroDescription: 'صرحكم الطبي المتكامل المجهز بقاعدة بيانات دوائية وتجميلية شاملة تضم كافة الأدوية والمستلزمات الطبية المعتمدة في مصر بأحدث الأسعار الرسمية. نوفر لك جميع احتياجاتك مع إمكانية التسوق كزائر مباشرة أو بإنشاء حساب، مع ميزة التوصيل السريع بإشراف د. جورج عبده.',
+      heroDescription: 'صرحكم الطبي المتكامل المجهز بقاعدة بيانات دوائية وتجميلية شاملة تضم كافة الأدوية والمستلزمات الطبية المعتمدة في مصر بأحدث الأسعار الرسمية. نوفر لك جميع احتياجاتك مع إمكانية التسوق كزائر مباشرة أو بإنشاء حساب، مع ميزة التوصيل المجاني والسريع بإشراف د. جورج عبده.',
       aboutTitle: 'خدمة طبية رائدة، أمانة مهنية، ورعاية حقيقية لصحة عائلتك',
       aboutText: 'تأسست صيدلية دكتور جورج عبده لتكون شريكك الصحي اليومي، مزودة بكافة أصناف السوق المصري وبأحدث الأسعار الرسمية المعتمدة. نلتزم بأعلى معايير الصيدلة الإكلينيكية لمراجعة الوصفات والتحقق من سلامة الجرعات، مع توفير البدائل الدوائية المطابقة علمياً عند الحاجة، وبخدمة توصيل فورية 100% بدون حد أدنى.',
-      deliveryNotice: 'تغطية شاملة وتوصيل فوري  لكافة مناطق الرحمانية قبلي 24 ساعة'
+      deliveryNotice: 'تغطية شاملة وتوصيل فوري مجاني لكافة المناطق 24 ساعة'
     };
 
     
@@ -2139,7 +2029,9 @@
               }
             }
           });
-// تحديث حالة الطلب لحظياً أمام العميل والصيدلي بمجرد تغييرها من لوحة التحكم
+
+          // 2. Listen for deleted orders live across all devices
+          // 1.b Listen for order updates/status changes live across all clients & customers
           fbDb.ref('orders').on('child_changed', (snap) => {
             const updated = snap.val();
             const orderId = snap.key || (updated && updated.id);
@@ -2156,14 +2048,13 @@
                 renderAdminKPIs();
                 renderAdminOrders();
               }
-              // تحديث نافذة طلباتي للعميل تلقائياً في نفس اللحظة إن كانت مفتوحة
               const myOrdersModal = document.getElementById('myOrdersModal');
               if (myOrdersModal && !myOrdersModal.classList.contains('hidden')) {
                 searchMyOrdersByPhone();
               }
             }
           });
-          // 2. Listen for deleted orders live across all devices
+
           fbDb.ref('orders').on('child_removed', (snap) => {
             const delId = snap.key || (snap.val() && snap.val().id);
             if (delId) {
@@ -2259,6 +2150,59 @@
             }
           });
 
+          // 9. Listen for medicines updates & additions live across all clients
+          fbDb.ref('medicines').on('child_added', (snap) => {
+            const med = snap.val();
+            const medId = snap.key || (med && med.id);
+            if (med) {
+              const cleanMed = { ...med, id: medId };
+              const localMeds = PharmacyDB.getMedicines();
+              const idx = localMeds.findIndex(m => String(m.id) === String(medId));
+              if (idx > -1) {
+                localMeds[idx] = { ...localMeds[idx], ...cleanMed };
+              } else {
+                localMeds.unshift(cleanMed);
+              }
+              localStorage.setItem('dr_george_medicines', JSON.stringify(localMeds));
+              try { renderStoreProducts(localMeds); } catch (e) {}
+              try { renderAdminInventory(); } catch (e) {}
+              try { renderAdminKPIs(); } catch (e) {}
+            }
+          });
+
+          fbDb.ref('medicines').on('child_changed', (snap) => {
+            const med = snap.val();
+            const medId = snap.key || (med && med.id);
+            if (med) {
+              const cleanMed = { ...med, id: medId };
+              const localMeds = PharmacyDB.getMedicines();
+              const idx = localMeds.findIndex(m => String(m.id) === String(medId));
+              if (idx > -1) {
+                localMeds[idx] = { ...localMeds[idx], ...cleanMed };
+                localStorage.setItem('dr_george_medicines', JSON.stringify(localMeds));
+                try { renderStoreProducts(localMeds); } catch (e) {}
+                try { renderAdminInventory(); } catch (e) {}
+                try { renderAdminKPIs(); } catch (e) {}
+              }
+            }
+          });
+
+          // 10. Listen for deleted medicines live across all clients
+          fbDb.ref('deleted_medicines').on('child_added', (snap) => {
+            const delId = snap.key;
+            if (delId) {
+              let localMeds = PharmacyDB.getMedicines();
+              const beforeCount = localMeds.length;
+              localMeds = localMeds.filter(m => String(m.id) !== String(delId));
+              if (localMeds.length !== beforeCount) {
+                localStorage.setItem('dr_george_medicines', JSON.stringify(localMeds));
+                try { renderStoreProducts(localMeds); } catch (e) {}
+                try { renderAdminInventory(); } catch (e) {}
+                try { renderAdminKPIs(); } catch (e) {}
+              }
+            }
+          });
+
           console.log("Firebase Realtime Listeners Active across all clients!");
         } catch (err) {
           console.warn("Realtime listener init error:", err);
@@ -2300,12 +2244,133 @@
         } catch (err) {}
       },
 
+      // --- 7. Realtime Cloud Sync for Medicines (Add, Edit, Delete, Stock, Excel Import) ---
+      async syncMedicine(med) {
+        if (!med || !med.id) return;
+        try {
+          if (typeof fbDb !== 'undefined' && fbDb) {
+            fbDb.ref('medicines/' + med.id).set(med);
+            fbDb.ref('deleted_medicines/' + med.id).remove();
+          }
+          fetch(`${this.getEndpoint()}/medicines/${med.id}.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(med)
+          }).catch(() => {});
+          fetch(`${this.getEndpoint()}/deleted_medicines/${med.id}.json`, {
+            method: 'DELETE'
+          }).catch(() => {});
+        } catch (err) {
+          console.error("Medicine sync error:", err);
+        }
+      },
+
+      async syncBatchMedicines(medsList) {
+        if (!Array.isArray(medsList) || medsList.length === 0) return;
+        try {
+          const batch = {};
+          medsList.forEach(m => {
+            if (m && m.id) batch[m.id] = m;
+          });
+          if (typeof fbDb !== 'undefined' && fbDb) {
+            fbDb.ref('medicines').update(batch);
+          }
+          fetch(`${this.getEndpoint()}/medicines.json`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(batch)
+          }).catch(() => {});
+        } catch (err) {
+          console.error("Batch medicines sync error:", err);
+        }
+      },
+
+      async deleteMedicineFromCloud(medId) {
+        if (!medId) return;
+        try {
+          if (typeof fbDb !== 'undefined' && fbDb) {
+            fbDb.ref('medicines/' + medId).remove();
+            fbDb.ref('deleted_medicines/' + medId).set(true);
+          }
+          fetch(`${this.getEndpoint()}/medicines/${medId}.json`, {
+            method: 'DELETE'
+          }).catch(() => {});
+          fetch(`${this.getEndpoint()}/deleted_medicines/${medId}.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(true)
+          }).catch(() => {});
+        } catch (err) {
+          console.error("Delete medicine sync error:", err);
+        }
+      },
+
+      async syncMedicinesFromCloud() {
+        try {
+          const processCloudMeds = (cloudMeds, deletedMeds) => {
+            let localMeds = PharmacyDB.getMedicines();
+            if (!localMeds || localMeds.length === 0) {
+              localMeds = (typeof PHARMACY_DATABASE_SEED !== 'undefined') ? [...PHARMACY_DATABASE_SEED] : [];
+            }
+
+            // 1. تطبيق الحذف: استبعاد أي دواء حذفه الأدمن
+            if (deletedMeds && typeof deletedMeds === 'object') {
+              const deletedIds = Object.keys(deletedMeds);
+              if (deletedIds.length > 0) {
+                localMeds = localMeds.filter(m => !deletedIds.includes(String(m.id)));
+              }
+            }
+
+            // 2. تطبيق التعديل والإضافة من السحابة (الأسعار، المخزون، المنتجات الجديدة، الإكسيل)
+            if (cloudMeds && typeof cloudMeds === 'object') {
+              Object.entries(cloudMeds).forEach(([idKey, cloudItem]) => {
+                if (!cloudItem || typeof cloudItem !== 'object') return;
+                const mId = cloudItem.id || idKey;
+                const idx = localMeds.findIndex(m => String(m.id) === String(mId));
+                if (idx > -1) {
+                  localMeds[idx] = { ...localMeds[idx], ...cloudItem, id: mId };
+                } else {
+                  localMeds.unshift({ ...cloudItem, id: mId });
+                }
+              });
+            }
+
+            localStorage.setItem('dr_george_medicines', JSON.stringify(localMeds));
+            try { renderStoreProducts(localMeds); } catch (e) {}
+            try { renderAdminInventory(); } catch (e) {}
+            try { renderAdminKPIs(); } catch (e) {}
+          };
+
+          if (typeof fbDb !== 'undefined' && fbDb) {
+            Promise.all([
+              fbDb.ref('medicines').once('value'),
+              fbDb.ref('deleted_medicines').once('value')
+            ]).then(([medsSnap, delSnap]) => {
+              processCloudMeds(medsSnap.val(), delSnap.val());
+            }).catch(() => {});
+            return;
+          }
+
+          const [medsRes, delRes] = await Promise.all([
+            fetch(`${this.getEndpoint()}/medicines.json`),
+            fetch(`${this.getEndpoint()}/deleted_medicines.json`)
+          ]);
+          const cloudMeds = medsRes.ok ? await medsRes.json() : null;
+          const deletedMeds = delRes.ok ? await delRes.json() : null;
+          processCloudMeds(cloudMeds, deletedMeds);
+        } catch (err) {
+          console.error("Medicines sync error:", err);
+        }
+      },
+
       // Central initialization for CloudSync
       init() {
         // Fetch authoritative delivery fee from cloud immediately
         this.syncDeliveryFeeFromCloud();
         // Fetch authoritative admin credentials from cloud immediately
         this.syncAdminCredsFromCloud();
+        // Fetch authoritative medicines and deletions from cloud immediately
+        this.syncMedicinesFromCloud();
         // Start WebSocket listeners
         this.initRealtimeListeners();
 
@@ -2356,7 +2421,7 @@
         if (!localStorage.getItem('dr_george_admin_creds')) {
           localStorage.setItem('dr_george_admin_creds', JSON.stringify({
             username: 'George Abdo',
-            password: '123DRGEORGE'
+            password: '123DRGeorgeAbdo'
           }));
         }
       },
@@ -2368,21 +2433,29 @@
       saveMedicine(medicine) {
         const list = this.getMedicines();
         if (medicine.id) {
-          const idx = list.findIndex(m => m.id == medicine.id);
+          const idx = list.findIndex(m => String(m.id) === String(medicine.id));
           if (idx > -1) {
             list[idx] = { ...list[idx], ...medicine };
+          } else {
+            list.unshift(medicine);
           }
         } else {
           medicine.id = Date.now();
           list.unshift(medicine);
         }
         localStorage.setItem('dr_george_medicines', JSON.stringify(list));
+        if (typeof CloudSync !== 'undefined' && CloudSync.syncMedicine) {
+          CloudSync.syncMedicine(medicine);
+        }
         return medicine;
       },
       deleteMedicine(id) {
         let list = this.getMedicines();
-        list = list.filter(m => m.id != id);
+        list = list.filter(m => String(m.id) !== String(id));
         localStorage.setItem('dr_george_medicines', JSON.stringify(list));
+        if (typeof CloudSync !== 'undefined' && CloudSync.deleteMedicineFromCloud) {
+          CloudSync.deleteMedicineFromCloud(id);
+        }
       },
       resetMedicines() {
         localStorage.setItem('dr_george_medicines', JSON.stringify(PHARMACY_DATABASE_SEED));
@@ -2421,11 +2494,14 @@
         CloudSync.syncOrder(newOrder);
         return newOrder;
       },
-      updateOrderStatus(orderId, newStatus) {
+      updateOrderStatus(orderId, newStatus, stockDeducted) {
         const orders = this.getOrders();
         const idx = orders.findIndex(o => o.id === orderId);
         if (idx > -1) {
           orders[idx].status = newStatus;
+          if (stockDeducted !== undefined) {
+            orders[idx].stockDeducted = stockDeducted;
+          }
           localStorage.setItem('dr_george_orders', JSON.stringify(orders));
         }
       },
@@ -2635,7 +2711,8 @@
         CloudSync.syncOrdersFromCloud();
         CloudSync.syncPrescriptionsFromCloud();
         CloudSync.syncCustomersFromCloud();
-      testCloudConnection();
+        CloudSync.syncMedicinesFromCloud();
+        testCloudConnection();
       }
     }, 8000);
 
@@ -2655,7 +2732,13 @@
       // Accept George Abdo, دكتور جورج عبده, دكتور جورج, admin, dr.george
       const validUsers = [
         'george abdo',
-
+        'george',
+        'دكتور جورج عبده',
+        'دكتور جورج',
+        'dr.george',
+        'dr george',
+        'dr. george abdo',
+        'admin'
       ];
 
       let creds = PharmacyDB.getAdminCreds();
@@ -3024,13 +3107,14 @@
       }
 
       noRes.classList.add('hidden');
-      countElem.innerText = `عرض ${items.length} منتجات متاحة للشحن الفوري`;
+      countElem.innerText = `عرض ${items.length} منتجات متاحة للشحن المجاني الفوري`;
 
       grid.innerHTML = items.map(p => `
         <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
           <div onclick="openProductDetailModal(${p.id})" class="relative overflow-hidden bg-slate-100 aspect-square cursor-pointer">
             <img src="${p.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
             ${p.badge ? `<span class="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md">${p.badge}</span>` : ''}
+            ${(p.stock !== undefined && Number(p.stock) <= 0) ? `<span class="absolute top-2 left-2 bg-rose-600/95 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm"><i class="fa-solid fa-circle-xmark ml-0.5"></i> نفد</span>` : ''}
             ${p.requiresPrescription ? `<span class="absolute bottom-2 right-2 bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm"><i class="fa-solid fa-file-prescription ml-1"></i> يلزم روشتة</span>` : ''}
           </div>
           <div class="p-3.5 flex-1 flex flex-col justify-between">
@@ -3050,10 +3134,23 @@
                   </div>
                 ` : ''}
               </div>
-              <button type="button" onclick="event.stopPropagation(); addToCart(${p.id})" class="bg-brand-50 hover:bg-brand-600 text-brand-700 hover:text-white border border-brand-200 hover:border-transparent px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 active:scale-95" title="إضافة مباشرة إلى السلة">
-                <i class="fa-solid fa-cart-plus"></i>
-                <span>أضف</span>
-              </button>
+              ${(function() {
+                const s = (p.stock !== undefined && p.stock !== null) ? Number(p.stock) : 50;
+                if (s <= 0) {
+                  return `
+                    <button type="button" onclick="event.stopPropagation(); alert('عذراً، هذا المنتج نفد من المخزون حالياً.')" class="bg-slate-100 text-slate-400 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 cursor-not-allowed" title="نفد من المخزون">
+                      <i class="fa-solid fa-ban"></i>
+                      <span>نفد</span>
+                    </button>
+                  `;
+                }
+                return `
+                  <button type="button" onclick="event.stopPropagation(); addToCart(${p.id})" class="bg-brand-50 hover:bg-brand-600 text-brand-700 hover:text-white border border-brand-200 hover:border-transparent px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 active:scale-95" title="إضافة مباشرة إلى السلة">
+                    <i class="fa-solid fa-cart-plus"></i>
+                    <span>أضف</span>
+                  </button>
+                `;
+              })()}
             </div>
           </div>
         </div>
@@ -3257,10 +3354,24 @@
       }
       badgesContainer.innerHTML = badgesHtml;
 
-      // Reset quantity to 1
-      document.getElementById('detailModalQtyInput').value = 1;
-      updateDetailModalSubtotal();
+      const availStock = (product.stock !== undefined && product.stock !== null) ? Number(product.stock) : 50;
+      const stockInfo = document.getElementById('detailModalStockInfo');
+      const qtyInput = document.getElementById('detailModalQtyInput');
 
+      if (stockInfo) {
+        if (availStock <= 0) {
+          stockInfo.innerHTML = `<span class="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 px-3 py-1 rounded-xl border border-rose-200"><i class="fa-solid fa-circle-xmark text-rose-500"></i> غير متوفر حالياً (نفد من المخزون)</span>`;
+          if (qtyInput) qtyInput.value = 0;
+        } else if (availStock <= 5) {
+          stockInfo.innerHTML = `<span class="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 px-3 py-1 rounded-xl border border-amber-200"><i class="fa-solid fa-triangle-exclamation text-amber-500"></i> متبقي في مخزن الصيدلية: ${availStock} عبوة فقط!</span>`;
+          if (qtyInput) qtyInput.value = 1;
+        } else {
+          stockInfo.innerHTML = `<span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-3 py-1 rounded-xl border border-emerald-200"><i class="fa-solid fa-boxes-stacked text-emerald-600"></i> الرصيد المتوفر بالمخزن: ${availStock} عبوة</span>`;
+          if (qtyInput) qtyInput.value = 1;
+        }
+      }
+
+      updateDetailModalSubtotal();
       document.getElementById('productDetailModal').classList.remove('hidden');
     }
 
@@ -3271,16 +3382,34 @@
     }
 
     function adjustDetailQty(delta) {
+      if (!currentDetailProduct) return;
+      const availStock = (currentDetailProduct.stock !== undefined && currentDetailProduct.stock !== null) 
+        ? Number(currentDetailProduct.stock) 
+        : 50;
+
+      if (availStock <= 0) {
+        alert(`عذراً، هذا المنتج (${currentDetailProduct.name}) غير متوفر في المخزن حالياً.`);
+        return;
+      }
+
       const input = document.getElementById('detailModalQtyInput');
       let current = parseInt(input.value) || 1;
-      current = Math.max(1, Math.min(99, current + delta));
+
+      if (delta > 0 && current + delta > availStock) {
+        alert(`عذراً، لا يمكنك زيادة الكمية عن ${availStock} عبوة لأن هذا هو أقصى رصيد متاح في مخزن الصيدلية حالياً!`);
+        input.value = availStock;
+        updateDetailModalSubtotal();
+        return;
+      }
+
+      current = Math.max(1, Math.min(availStock, current + delta));
       input.value = current;
       updateDetailModalSubtotal();
     }
 
     function updateDetailModalSubtotal() {
       if (!currentDetailProduct) return;
-      const qty = parseInt(document.getElementById('detailModalQtyInput').value) || 1;
+      const qty = parseInt(document.getElementById('detailModalQtyInput').value) || 0;
       const subtotal = currentDetailProduct.price * qty;
       document.getElementById('detailModalSubtotal').innerText = `${subtotal.toFixed(2)} ج.م`;
     }
@@ -3289,14 +3418,26 @@
       if (!currentDetailProduct) return;
       const prod = currentDetailProduct;
       const prodName = prod.name || 'المنتج';
-      const qty = parseInt(document.getElementById('detailModalQtyInput').value) || 1;
+      const availStock = (prod.stock !== undefined && prod.stock !== null) ? Number(prod.stock) : 50;
 
-      // Add to cart with chosen quantity
+      if (availStock <= 0) {
+        alert(`عذراً، منتج "${prodName}" غير متوفر في المخزن حالياً.`);
+        return;
+      }
+
+      const chosenQty = parseInt(document.getElementById('detailModalQtyInput').value) || 1;
       const idx = cart.findIndex(item => item.id == prod.id);
+      const inCartQty = idx > -1 ? cart[idx].qty : 0;
+
+      if (inCartQty + chosenQty > availStock) {
+        alert(`عذراً، أقصى كمية متوفرة في المخزن من "${prodName}" هي ${availStock} عبوة فقط.\nلديك بالفعل ${inCartQty} في السلة، ولا يمكن إضافة ${chosenQty} عبوة إضافية!`);
+        return;
+      }
+
       if (idx > -1) {
-        cart[idx].qty += qty;
+        cart[idx].qty += chosenQty;
       } else {
-        cart.push({ ...prod, qty: qty });
+        cart.push({ ...prod, qty: chosenQty });
       }
 
       updateCartUI();
@@ -3305,153 +3446,103 @@
       if (checkoutDirectly) {
         openCheckoutModal();
       } else {
-        showToast(`تمت إضافة (${qty}) من "${prodName}" إلى السلة بنجاح!`);
+        showToast(`تمت إضافة (${chosenQty}) من "${prodName}" إلى السلة بنجاح!`);
       }
     }
 
-// --- Customer Order Tracking & History (طلباتي) Logic ---
-  // --- Customer Order Tracking & History (طلباتي) Logic ---
+    // --- Customer Order Tracking & History (طلباتي) Logic ---
     function cleanPhoneNumberForSearch(p) {
       if (!p) return '';
+      // 1. تحويل الأرقام المشرقية (٠-٩) إلى أرقام (0-9)
       let str = String(p).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+      // 2. إزالة أي مسافات أو رموز غير رقمية
       let c = str.replace(/[^0-9]/g, '');
+      // 3. إزالة كود مصر الدولي والصفر من البداية لتوحيد المقارنة
       if (c.startsWith('0020')) c = c.slice(4);
       else if (c.startsWith('20') && c.length > 10) c = c.slice(2);
       if (c.startsWith('0')) c = c.slice(1);
       return c;
     }
 
-    function getMyDeviceCustomerInfo() {
-      const cur = PharmacyDB.getCurrentCustomer() || {};
-      const phone = cur.phone || cur.contact || localStorage.getItem('dr_george_customer_phone') || localStorage.getItem('dr_george_last_order_phone') || '';
-      const name = cur.name || localStorage.getItem('dr_george_customer_name') || '';
-      let orderIds = [];
-      try {
-        orderIds = JSON.parse(localStorage.getItem('dr_george_my_order_ids') || '[]');
-      } catch (e) {
-        orderIds = [];
-      }
-      return { phone, name, orderIds };
-    }
-
     async function openMyOrdersModal() {
-      document.getElementById('myOrdersModal').classList.remove('hidden');
+      const cur = PharmacyDB.getCurrentCustomer();
       const phoneInput = document.getElementById('myOrdersPhoneSearch');
-      const info = getMyDeviceCustomerInfo();
-      if (phoneInput && !phoneInput.value.trim() && info.phone) {
-        phoneInput.value = info.phone;
+      const savedPhone = (cur && (cur.phone || cur.contact)) || localStorage.getItem('dr_george_last_order_phone') || '';
+      if (phoneInput && !phoneInput.value.trim() && savedPhone) {
+        phoneInput.value = savedPhone;
       }
-      // استعلام وعرض تلقائي لطلبات العميل فور فتح النافذة دون الحاجة للبحث اليدوي
-      loadCustomerOrders(false);
+      document.getElementById('myOrdersModal').classList.remove('hidden');
+      searchMyOrdersByPhone();
     }
 
     function closeMyOrdersModal() {
       document.getElementById('myOrdersModal').classList.add('hidden');
     }
 
-    async function searchMyOrdersByPhone(forceManual = false) {
+    async function searchMyOrdersByPhone() {
       const searchInput = document.getElementById('myOrdersPhoneSearch');
-      const hasVal = Boolean(searchInput && searchInput.value.trim().length > 0);
-      loadCustomerOrders(forceManual || hasVal);
-    }
-
-    async function loadCustomerOrders(isManualSearch) {
-      const searchInput = document.getElementById('myOrdersPhoneSearch');
-      const rawManualQuery = String(searchInput ? searchInput.value : '').trim();
-      const info = getMyDeviceCustomerInfo();
+      const rawQuery = String(searchInput ? searchInput.value : '').trim();
+      const queryPhone = cleanPhoneNumberForSearch(rawQuery);
 
       function doFilterAndRender() {
         const container = document.getElementById('myOrdersListContainer');
         const emptyState = document.getElementById('myOrdersEmptyState');
         if (!container || !emptyState) return;
 
+        // إذا لم يُدخل العميل رقم هاتف بعد: لا نعرض أي طلبات منعاً لظهور طلبات العملاء الآخرين
+        if (!rawQuery) {
+          emptyState.classList.add('hidden');
+          container.innerHTML = `
+            <div class="text-center py-10 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200 p-6">
+              <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+              </div>
+              <h4 class="text-sm font-black text-slate-700 mb-1.5">أدخل رقم هاتفك لعرض طلباتك</h4>
+              <p class="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                اكتب رقم الموبايل الذي قمت بعمل الطلب به في الحقل أعلاه واضغط على <strong>بحث</strong> لعرض وتتبع مشترياتك الخاصة فقط.
+              </p>
+            </div>
+          `;
+          return;
+        }
+
         const rawOrders = PharmacyDB.getOrders();
         const orders = Array.isArray(rawOrders) ? rawOrders.filter(Boolean) : [];
 
-        let matched = [];
+        const filtered = orders.filter(o => {
+          if (!o || typeof o !== 'object') return false;
+          const oPhone = cleanPhoneNumberForSearch(o.phone);
+          const orderId = String(o.id || '').trim().toLowerCase();
+          const cleanQueryRaw = rawQuery.toLowerCase();
 
-        if (isManualSearch) {
-          if (!rawManualQuery) {
-            emptyState.classList.add('hidden');
-            container.innerHTML = `
-              <div class="text-center py-10 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200 p-6">
-                <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-2xl">
-                  <i class="fa-solid fa-mobile-screen-button"></i>
-                </div>
-                <h4 class="text-sm font-black text-slate-700 mb-1.5">أدخل رقم هاتفك لعرض طلباتك</h4>
-                <p class="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-                  اكتب رقم الموبايل الذي قمت بعمل الطلب به في الحقل أعلاه واضغط على <strong>بحث</strong> لعرض وتتبع مشترياتك الخاصة فقط.
-                </p>
-              </div>
-            `;
-            return;
-          }
+          // 1. مطابقة دقيقة برقم الهاتف (على الأقل 6 أرقام لتجنب التشابه العشوائي)
+          const phoneMatch = queryPhone.length >= 6 && oPhone && (
+            oPhone === queryPhone || 
+            oPhone.endsWith(queryPhone) || 
+            queryPhone.endsWith(oPhone)
+          );
 
-          const qPhone = cleanPhoneNumberForSearch(rawManualQuery);
-          const qLower = rawManualQuery.toLowerCase();
+          // 2. أو مطابقة مباشرة برقم الطلب (مثل ORD-303)
+          const orderIdMatch = cleanQueryRaw.length >= 3 && (
+            orderId === cleanQueryRaw || 
+            orderId.includes(cleanQueryRaw)
+          );
 
-          matched = orders.filter(o => {
-            if (!o || typeof o !== 'object') return false;
-            const oPhone = cleanPhoneNumberForSearch(o.phone);
-            const oId = String(o.id || '').trim().toLowerCase();
+          return phoneMatch || orderIdMatch;
+        });
 
-            const phoneMatch = qPhone.length >= 6 && oPhone && (
-              oPhone === qPhone || oPhone.endsWith(qPhone) || qPhone.endsWith(oPhone)
-            );
-            const idMatch = qLower.length >= 3 && (oId === qLower || oId.includes(qLower));
-            return phoneMatch || idMatch;
-          });
-
-          if (qPhone.length >= 8) {
-            try {
-              localStorage.setItem('dr_george_customer_phone', rawManualQuery);
-              localStorage.setItem('dr_george_last_order_phone', rawManualQuery);
-            } catch (e) {}
-          }
-        } else {
-          // استعلام تلقائي ذكي بدون كتابة أي رقم
-          const cleanSavedPhone = cleanPhoneNumberForSearch(info.phone);
-
-          matched = orders.filter(o => {
-            if (!o || typeof o !== 'object') return false;
-            const oId = String(o.id || '').trim();
-            const oPhone = cleanPhoneNumberForSearch(o.phone);
-
-            // 1. مطابقة بمعرفات الطلبات التي أُنشئت على هذا المتصفح
-            if (info.orderIds && info.orderIds.includes(oId)) {
-              return true;
-            }
-            // 2. مطابقة برقم هاتف العميل المسجل على هذا الجهاز
-            if (cleanSavedPhone && cleanSavedPhone.length >= 6 && oPhone && (
-              oPhone === cleanSavedPhone || oPhone.endsWith(cleanSavedPhone) || cleanSavedPhone.endsWith(oPhone)
-            )) {
-              return true;
-            }
-            return false;
-          });
-
-          if (matched.length === 0 && !info.phone && info.orderIds.length === 0) {
-            emptyState.classList.add('hidden');
-            container.innerHTML = `
-              <div class="text-center py-10 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200 p-6">
-                <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-2xl">
-                  <i class="fa-solid fa-box-open"></i>
-                </div>
-                <h4 class="text-sm font-black text-slate-700 mb-1.5">لا توجد طلبات سابقة على هذا الجهاز</h4>
-                <p class="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-                  اطلب الآن أدويتك وسيتم حفظها وتتبعها هنا تلقائياً، أو اكتب رقم هاتفك أعلاه إذا طلبت سابقاً من هاتف آخر.
-                </p>
-              </div>
-            `;
-            return;
-          }
+        // حفظ الرقم الذي تم البحث به لسهولة فتحه تلقائياً في المرات القادمة
+        if (queryPhone.length >= 8) {
+          try { localStorage.setItem('dr_george_last_order_phone', rawQuery); } catch (e) {}
         }
 
-        renderMyOrdersList(matched);
+        renderMyOrdersList(filtered);
       }
 
+      // 1. استجابة فورية سريعة من الذاكرة المحلية
       doFilterAndRender();
 
+      // 2. تحديث متزامن في الخلفية من Firebase
       try {
         const res = await fetch(`${CloudSync.getEndpoint()}/orders.json`);
         if (res.ok) {
@@ -3497,7 +3588,7 @@
           const orderDate = String(o.date || '');
           const orderStatus = String(o.status || 'قيد المراجعة');
           const orderAddress = String(o.address || 'استلام من الصيدلية');
-          const paymentMethod = String(o.paymentMethod || 'كاش عند الاستلام');
+          const paymentMethod = String(o.paymentMethod || 'كاش');
           const totalNum = Number(o.total !== undefined ? o.total : (o.subtotal || 0));
           const totalFormatted = isNaN(totalNum) ? '0.00' : totalNum.toFixed(2);
 
@@ -3524,40 +3615,35 @@
             ? itemsList.map(i => {
                 if (typeof i === 'string') return i;
                 const pText = i.price ? ` (${Number(i.price).toFixed(2)} ج.م)` : '';
-                return `${i.name || 'صنف'} (×${i.qty || 1})${pText}`;
-              }).join('، ')
+                const qtyNum = i.qty || 1;
+                return `<span class="inline-flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-slate-200 text-xs font-bold text-slate-800 shadow-sm"><i class="fa-solid fa-capsules text-brand-600"></i> ${i.name || 'صنف'} <span class="bg-brand-600 text-white font-black text-[11px] px-1.5 py-0.5 rounded">×${qtyNum}</span>${pText}</span>`;
+              }).join(' ')
             : 'أدوية ومستلزمات';
 
           return `
-            <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5 text-xs hover:border-brand-300 transition-colors shadow-sm">
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5 text-xs hover:border-brand-300 transition-colors">
               <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span class="font-black text-brand-700 bg-brand-50 px-2.5 py-1 rounded-lg border border-brand-200">${orderId}</span>
-                  <span class="text-[11px] text-slate-400 font-mono">${orderDate}</span>
+                <div>
+                  <span class="font-extrabold text-brand-700 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">${orderId}</span>
+                  <span class="text-[11px] text-slate-400 mr-2 font-mono">${orderDate}</span>
                 </div>
                 <div>${statusBadge}</div>
               </div>
 
-              <div class="bg-white p-3 rounded-xl border border-slate-200 text-slate-700 space-y-1.5">
-                <div class="font-bold text-slate-800">
-                  الأصناف المطلوبة: <span class="font-normal text-slate-600">${itemsText}</span>
-                </div>
-                <div class="text-[11px] text-slate-500 flex items-center gap-1">
-                  <i class="fa-solid fa-location-dot text-slate-400"></i>
-                  <span>عنوان التوصيل: ${orderAddress}</span>
-                </div>
-                ${o.notes ? `<div class="text-[11px] text-amber-700 bg-amber-50/70 p-1.5 rounded border border-amber-100">ملاحظاتك: ${o.notes}</div>` : ''}
+              <div class="bg-white p-2.5 rounded-xl border border-slate-200 text-slate-700 space-y-1">
+                <div class="font-bold text-slate-800">الأصناف: <span class="font-normal text-slate-600">${itemsText}</span></div>
+                <div class="text-[11px] text-slate-500">عنوان التوصيل: ${orderAddress}</div>
               </div>
 
-              <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200/60">
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
                 <div class="flex items-center gap-3">
                   <span class="font-black text-slate-900 text-sm">المجموع: ${totalFormatted} ج.م</span>
                   <span class="text-[11px] text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded">طريقة الدفع: ${paymentMethod}</span>
                 </div>
 
-                <a href="https://wa.me/201121982368?text=${encodeURIComponent('مرحباً دكتور جورج عبده، أستفسر عن حالة وتفاصيل طلبي رقم ' + orderId)}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow transition-colors">
-                  <i class="fa-brands fa-whatsapp text-sm"></i>
-                  <span>متابعة مع الصيدلي</span>
+                <a href="https://wa.me/201121982368?text=${encodeURIComponent('مرحباً دكتور جورج عبده، أستفسر عن حالة طلبي رقم ' + orderId)}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow transition-colors">
+                  <i class="fa-brands fa-whatsapp"></i>
+                  <span>تواصل واتساب</span>
                 </a>
               </div>
             </div>
@@ -3576,15 +3662,16 @@
 
       const availStock = (product.stock !== undefined && product.stock !== null) ? Number(product.stock) : 50;
       if (availStock <= 0) {
-        alert(`عذراً، منتج "${product.name}" غير متوفر في الصيدلية حالياً (نفد من المخزون).`);
+        alert(`عذراً، منتج "${product.name}" نفد من المخزون تماماً.`);
         showToast(`عذراً، "${product.name}" نفد من المخزون.`);
         return;
       }
 
       const idx = cart.findIndex(item => item.id == productId);
-      const currentQty = idx > -1 ? cart[idx].qty : 0;
-      if (currentQty + 1 > availStock) {
-        alert(`عذراً، أقصى كمية متوفرة في الصيدلية من "${product.name}" هي ${availStock} عبوة فقط.`);
+      const inCartQty = idx > -1 ? cart[idx].qty : 0;
+
+      if (inCartQty + 1 > availStock) {
+        alert(`عذراً، لا يمكنك إضافة المزيد. الرصيد المتوفر في المخزن من "${product.name}" هو ${availStock} عبوة فقط، ولديك ${inCartQty} في السلة!`);
         return;
       }
 
@@ -3607,21 +3694,10 @@
         const product = meds.find(p => p.id == productId);
         const availStock = (product && product.stock !== undefined && product.stock !== null) ? Number(product.stock) : 50;
         if (cart[idx].qty + delta > availStock) {
-          alert(`عذراً، أقصى كمية متوفرة في المخزن من "${product ? product.name : 'هذا المنتج'}" هي ${availStock} عبوة فقط.`);
+          alert(`عذراً، لا يمكنك زيادة الكمية عن ${availStock} عبوة لأن هذا هو كامل الرصيد المتوفر في مخزن الصيدلية حالياً!`);
           return;
         }
       }
-
-      cart[idx].qty += delta;
-      if (cart[idx].qty <= 0) {
-        cart.splice(idx, 1);
-      }
-      updateCartUI();
-    }
-
-    function updateCartQty(productId, delta) {
-      const idx = cart.findIndex(item => item.id == productId);
-      if (idx === -1) return;
 
       cart[idx].qty += delta;
       if (cart[idx].qty <= 0) {
@@ -3650,11 +3726,11 @@
       const deliveryFee = PharmacyDB.getDeliveryFee();
       const delivBanner = document.getElementById('cartDeliveryFeeBanner');
       if (delivBanner) {
-        delivBanner.innerText = deliveryFee === 0 ? 'يححده ادارة الصيدلية' : `${deliveryFee.toFixed(2)} ج.م`;
+        delivBanner.innerText = deliveryFee === 0 ? 'مجاناً (0.00 ج.م)' : `${deliveryFee.toFixed(2)} ج.م`;
       }
       const delivElem = document.getElementById('cartDeliveryFee');
       if (delivElem) {
-        delivElem.innerText = deliveryFee === 0 ? 'يححده ادارة الصيدلية' : `${deliveryFee.toFixed(2)} ج.م`;
+        delivElem.innerText = deliveryFee === 0 ? 'مجاناً' : `${deliveryFee.toFixed(2)} ج.م`;
       }
 
       if (cart.length === 0) {
@@ -3733,46 +3809,9 @@
     function closeCheckoutModal() {
       document.getElementById('checkoutModal').classList.add('hidden');
     }
-function submitCustomerOrder(e) {
+
+    function submitCustomerOrder(e) {
       e.preventDefault();
-
-      if (!cart || cart.length === 0) {
-        showToast("سلة المشتريات فارغة!");
-        return;
-      }
-
-      const meds = PharmacyDB.getMedicines();
-
-      // 1. التحقق من توافر المخزون لجميع الأصناف قبل تأكيد الطلب
-      for (const item of cart) {
-        const product = meds.find(m => m.id == item.id || m.name == item.name);
-        const stock = (product && product.stock !== undefined && product.stock !== null) ? Number(product.stock) : 50;
-
-        if (!product || stock <= 0) {
-          alert(`عذراً، منتج "${item.name}" غير متوفر حالياً في الصيدلية (نفد من المخزون). يرجى حذفه من السلة لإتمام الطلب.`);
-          showToast(`عذراً، منتج "${item.name}" نفد من المخزون.`);
-          return;
-        }
-
-        if (stock < item.qty) {
-          alert(`عذراً، الكمية المطلوبة من "${item.name}" (${item.qty} عبوة) أكبر من المتاح في المخزن (${stock} عبوة فقط).\nيرجى تعديل الكمية بالسلة.`);
-          showToast(`الكمية المتاحة من "${item.name}" هي ${stock} فقط.`);
-          return;
-        }
-      }
-
-      // 2. خصم الكميات المطلوبة فوراً من قاعدة البيانات في الأدمن
-      for (const item of cart) {
-        const product = meds.find(m => m.id == item.id || m.name == item.name);
-        if (product) {
-          product.stock = Math.max(0, (Number(product.stock) || 0) - Number(item.qty));
-          if (typeof CloudSync !== 'undefined' && CloudSync.syncMedicineStock) {
-            CloudSync.syncMedicineStock(product.id, product.stock);
-          }
-        }
-      }
-      localStorage.setItem('dr_george_medicines', JSON.stringify(meds));
-
       const name = document.getElementById('orderCustomerName').value.trim();
       const phone = document.getElementById('orderCustomerPhone').value.trim();
       const address = document.getElementById('orderCustomerAddress').value.trim();
@@ -3794,28 +3833,11 @@ function submitCustomerOrder(e) {
         items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
         subtotal: subtotal,
         deliveryFee: deliveryFee,
-        total: grandTotal
+        total: grandTotal,
+        stockDeducted: false
       });
 
-      // 3. حفظ بيانات الطلب والعميل على هذا الجهاز للتعرف التلقائي في "طلباتي"
-      if (phone) {
-        try {
-          localStorage.setItem('dr_george_customer_phone', phone);
-          localStorage.setItem('dr_george_last_order_phone', phone);
-        } catch (e) {}
-      }
-      if (name) {
-        try { localStorage.setItem('dr_george_customer_name', name); } catch (e) {}
-      }
-      try {
-        let myOrderIds = JSON.parse(localStorage.getItem('dr_george_my_order_ids') || '[]');
-        if (!myOrderIds.includes(newOrder.id)) {
-          myOrderIds.unshift(newOrder.id);
-          localStorage.setItem('dr_george_my_order_ids', JSON.stringify(myOrderIds));
-        }
-      } catch (e) {}
-
-      // تسجيل العميل في دليل عملاء الأدمن
+            // Auto-record customer profile for Admin Customers Directory
       const existingCusts = PharmacyDB.getCustomers();
       if (!existingCusts.some(c => (c.phone && c.phone === phone) || (c.contact && c.contact === phone))) {
         const orderCustomerRecord = {
@@ -3829,18 +3851,14 @@ function submitCustomerOrder(e) {
         };
         PharmacyDB.registerCustomer(orderCustomerRecord);
       }
-
+      if (phone) {
+        try { localStorage.setItem('dr_george_last_order_phone', phone); } catch (e) {}
+      }
       cart = [];
       updateCartUI();
       closeCheckoutModal();
 
-      // تحديث جداول ومخزن الأدمن فوراً
-      if (PharmacyDB.isAdminAuthenticated()) {
-        renderAdminDashboard();
-      }
-      renderStoreProducts(PharmacyDB.getMedicines());
-
-      showToast(`تم إرسال طلبك بنجاح (${newOrder.id})! تم خصم الأصناف من المخزن وتأكيد الطلب.`);
+      showToast(`تم إرسال طلبك بنجاح (${newOrder.id})! سيتواصل معك صيدلي د. جورج عبده فوراً لتأكيد التوصيل المجاني.`);
     }
 
     // Prescription Modal Actions
@@ -3981,6 +3999,7 @@ function submitCustomerOrder(e) {
         CloudSync.syncPrescriptionsFromCloud();
       } else if (tab === 'inventory') {
         renderAdminInventory();
+        CloudSync.syncMedicinesFromCloud();
       } else if (tab === 'settings') {
         loadAdminSettingsForm();
       }
@@ -4067,7 +4086,7 @@ function submitCustomerOrder(e) {
       setVal('settingWhatsappMsg', s.whatsappMessage);
       setVal('settingInstapayNumber', s.instapayNumber);
       setVal('settingInstapayName', s.instapayName);
-      setVal('settingDeliveryFeeText', s.deliveryFeeText || ' يححده ادارة الصيدلية');
+      setVal('settingDeliveryFeeText', s.deliveryFeeText || 'مجاناً 100%');
       setVal('settingTopAnnouncement', s.topAnnouncement);
       setVal('settingHeroHeadline', s.heroHeadline);
       setVal('settingHeroSubheadline', s.heroSubheadline);
@@ -4288,6 +4307,7 @@ function submitCustomerOrder(e) {
       try { CloudSync.syncOrdersFromCloud(); } catch (e) { console.error(e); }
       try { CloudSync.syncPrescriptionsFromCloud(); } catch (e) { console.error(e); }
       try { CloudSync.syncCustomersFromCloud(); } catch (e) { console.error(e); }
+      try { CloudSync.syncMedicinesFromCloud(); } catch (e) { console.error(e); }
       try { testCloudConnection(); } catch (e) { console.error(e); }
       try { renderAdminKPIs(); } catch (e) { console.error(e); }
       try { renderAdminOrders(); } catch (e) { console.error(e); }
@@ -4304,6 +4324,7 @@ function submitCustomerOrder(e) {
     function refreshAdminData() {
       CloudSync.syncOrdersFromCloud();
       CloudSync.syncPrescriptionsFromCloud();
+      CloudSync.syncMedicinesFromCloud();
       renderAdminDashboard();
       showToast("تم تحديث بيانات لوحة تحكم الصيدلي بنجاح");
     }
@@ -4414,15 +4435,8 @@ function submitCustomerOrder(e) {
                   ${cleanPhone ? `<a href="tel:${rawPhone}" class="hover:text-brand-600 underline font-mono">${rawPhone}</a>` : '<span class="text-slate-400">غير محدد</span>'}
                 </td>
                 <td class="p-3 text-slate-600 max-w-xs font-medium truncate" title="${orderAddress}">${orderAddress}</td>
-<td class="p-3 max-w-xs">
-  <div class="flex items-center gap-2">
-    <span class="truncate text-slate-700 font-medium max-w-[130px] inline-block" title="${itemsSummary}">${itemsSummary}</span>
-    <button type="button" onclick="openAdminOrderDetailModal('${orderId}')" class="shrink-0 bg-brand-50 hover:bg-brand-600 text-brand-700 hover:text-white border border-brand-200 hover:border-transparent px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shadow-sm cursor-pointer" title="عرض تفاصيل الأصناف والتعليقات">
-      <i class="fa-solid fa-file-lines text-xs"></i>
-      <span>التفاصيل</span>
-    </button>
-  </div>
-</td>                <td class="p-3 font-black text-slate-900 whitespace-nowrap">${totalFormatted} ج.م</td>
+                <td class="p-3 text-slate-500 max-w-xs truncate" title="${itemsSummary}">${itemsSummary}</td>
+                <td class="p-3 font-black text-slate-900 whitespace-nowrap">${totalFormatted} ج.م</td>
                 <td class="p-3 font-bold text-xs whitespace-nowrap">
                   ${isInstapay ? '<span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-[10px]">⚡ إنستاباي</span>' : '<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-[10px]">💵 كاش</span>'}
                 </td>
@@ -4461,23 +4475,99 @@ function submitCustomerOrder(e) {
     }
 
     function changeOrderStatus(orderId, newStatus) {
-      PharmacyDB.updateOrderStatus(orderId, newStatus);
+      const orders = PharmacyDB.getOrders();
+      const order = orders.find(o => o.id === orderId);
+
+      // إذا تم اختيار "تم التوصيل" ولم يسبق خصم المخزون لهذا الطلب
+      if (newStatus === 'تم التوصيل' && order && !order.stockDeducted) {
+        const meds = PharmacyDB.getMedicines();
+        let updatedAny = false;
+        const items = Array.isArray(order.items) 
+          ? order.items 
+          : (order.items && typeof order.items === 'object' ? Object.values(order.items) : []);
+
+        items.forEach(item => {
+          if (!item) return;
+          const med = meds.find(m => (item.id && String(m.id) === String(item.id)) || m.name === item.name || (item.name && m.name && m.name.includes(item.name)));
+          if (med) {
+            const curStock = (med.stock !== undefined && med.stock !== null) ? Number(med.stock) : 50;
+            const qty = Number(item.qty) || 1;
+            med.stock = Math.max(0, curStock - qty);
+            updatedAny = true;
+            if (typeof CloudSync !== 'undefined' && CloudSync.syncMedicine) {
+              CloudSync.syncMedicine(med);
+            }
+          }
+        });
+
+        if (updatedAny) {
+          localStorage.setItem('dr_george_medicines', JSON.stringify(meds));
+          try { renderStoreProducts(meds); } catch (e) {}
+          try { renderAdminInventory(); } catch (e) {}
+        }
+        order.stockDeducted = true;
+      }
+      // إذا تم تغيير الحالة إلى "ملغي" بعد أن كان قد تم التوصيل: إعادة الكميات للمخزون
+      else if (newStatus === 'ملغي' && order && order.stockDeducted) {
+        const meds = PharmacyDB.getMedicines();
+        let updatedAny = false;
+        const items = Array.isArray(order.items) 
+          ? order.items 
+          : (order.items && typeof order.items === 'object' ? Object.values(order.items) : []);
+
+        items.forEach(item => {
+          if (!item) return;
+          const med = meds.find(m => (item.id && String(m.id) === String(item.id)) || m.name === item.name || (item.name && m.name && m.name.includes(item.name)));
+          if (med) {
+            const curStock = (med.stock !== undefined && med.stock !== null) ? Number(med.stock) : 50;
+            const qty = Number(item.qty) || 1;
+            med.stock = curStock + qty;
+            updatedAny = true;
+            if (typeof CloudSync !== 'undefined' && CloudSync.syncMedicine) {
+              CloudSync.syncMedicine(med);
+            }
+          }
+        });
+
+        if (updatedAny) {
+          localStorage.setItem('dr_george_medicines', JSON.stringify(meds));
+          try { renderStoreProducts(meds); } catch (e) {}
+          try { renderAdminInventory(); } catch (e) {}
+        }
+        order.stockDeducted = false;
+      }
+
+      PharmacyDB.updateOrderStatus(orderId, newStatus, order ? order.stockDeducted : false);
       
-      // Update status in Firebase immediately
+      // Update status and stockDeducted in Firebase immediately
       try {
         if (typeof fbDb !== 'undefined' && fbDb) {
           fbDb.ref('orders/' + orderId + '/status').set(newStatus);
+          if (order && order.stockDeducted !== undefined) {
+            fbDb.ref('orders/' + orderId + '/stockDeducted').set(order.stockDeducted);
+          }
         }
         fetch(`${CloudSync.getEndpoint()}/orders/${orderId}/status.json`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newStatus)
         }).catch(() => {});
+        if (order && order.stockDeducted !== undefined) {
+          fetch(`${CloudSync.getEndpoint()}/orders/${orderId}/stockDeducted.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(order.stockDeducted)
+          }).catch(() => {});
+        }
       } catch (err) {}
 
       renderAdminKPIs();
       renderAdminOrders();
-      showToast(`تم تحديث حالة الطلب (${orderId}) إلى "${newStatus}" بنجاح.`);
+      if (newStatus === 'تم التوصيل') {
+        showToast(`تم تحديث حالة الطلب (${orderId}) إلى "تم التوصيل" وخصم الكميات من المخزون بنجاح!`);
+      } else {
+        showToast(`تم تحديث حالة الطلب (${orderId}) إلى "${newStatus}" بنجاح.`);
+      }
     }
 
     function handleDeleteOrder(orderId) {
@@ -4775,7 +4865,14 @@ function submitCustomerOrder(e) {
             <td class="p-3 font-semibold">
               ${m.requiresPrescription ? '<span class="text-rose-600 bg-rose-50 px-2 py-0.5 rounded text-[10px] font-bold">نعم (روشتة)</span>' : '<span class="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px] font-bold">لا (OTC)</span>'}
             </td>
-            <td class="p-3 font-bold text-slate-800">${m.stock || 50} عبوة</td>
+            <td class="p-3 font-bold text-slate-800">
+              ${(function() {
+                const s = (m.stock !== undefined && m.stock !== null) ? Number(m.stock) : 50;
+                if (s <= 0) return '<span class="bg-rose-100 text-rose-800 px-2.5 py-0.5 rounded-full font-bold text-xs"><i class="fa-solid fa-circle-xmark ml-1"></i> نفد (0)</span>';
+                if (s <= 5) return `<span class="bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-bold text-xs"><i class="fa-solid fa-triangle-exclamation ml-1"></i> ${s} عبوة (منخفض)</span>`;
+                return `<span class="text-slate-800 font-bold">${s} عبوة</span>`;
+              })()}
+            </td>
             <td class="p-3 text-center whitespace-nowrap">
               <div class="flex items-center justify-center gap-1.5">
                 <button onclick="openEditMedicineModal(${m.id})" class="p-1.5 bg-brand-50 text-brand-700 hover:bg-brand-600 hover:text-white rounded-lg transition-colors text-xs" title="تعديل">
@@ -4802,6 +4899,7 @@ function submitCustomerOrder(e) {
         const content = evt.target.result;
         const lines = content.split(/\r?\n/);
         let count = 0;
+        const newMedsBatch = [];
 
         // Process lines: expected format (Name, Price, Quantity/Stock, Category)
         lines.forEach((line, index) => {
@@ -4818,7 +4916,7 @@ function submitCustomerOrder(e) {
             const cat = parts[3] ? parts[3].trim().toLowerCase() : 'medicines';
 
             if (name && price > 0) {
-              PharmacyDB.saveMedicine({
+              const savedM = PharmacyDB.saveMedicine({
                 name: name,
                 price: price,
                 stock: stock,
@@ -4827,15 +4925,21 @@ function submitCustomerOrder(e) {
                 image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400',
                 description: `متوفر في صيدلية د. جورج عبده بسعر ${price} ج.م`
               });
+              newMedsBatch.push(savedM);
               count++;
             }
           }
         });
 
+        // المزامنة الفورية لجميع الأصناف المستوردة مع Firebase سحابياً
+        if (newMedsBatch.length > 0 && typeof CloudSync !== 'undefined' && CloudSync.syncBatchMedicines) {
+          CloudSync.syncBatchMedicines(newMedsBatch);
+        }
+
         e.target.value = '';
         renderAdminDashboard();
         renderStoreProducts(PharmacyDB.getMedicines());
-        showToast(`تم استيراد ${count} دواء ومنتج بنجاح من الملف إلى قاعدة البيانات!`);
+        showToast(`تم استيراد ${count} دواء ومنتج بنجاح من ملف الإكسيل ومزامنتها سحابياً لجميع الزوار!`);
       };
 
       reader.readAsText(file, 'utf-8');
@@ -4942,115 +5046,7 @@ function submitCustomerOrder(e) {
         toast.classList.add('translate-y-24', 'opacity-0');
       }, 4000);
     }
-  // --- Admin Order Details & Comments Modal Functions ---
-    let currentAdminViewingOrderId = null;
-
-    function openAdminOrderDetailModal(orderId) {
-      const orders = PharmacyDB.getOrders();
-      const order = orders.find(o => o && o.id === orderId);
-      if (!order) {
-        showToast("لم يتم العثور على بيانات هذا الطلب!");
-        return;
-      }
-
-      currentAdminViewingOrderId = orderId;
-
-      // 1. تعبئة بيانات العميل والهيدر
-      document.getElementById('orderModalTitle').innerText = `طلب رقم: ${order.id}`;
-      document.getElementById('orderModalDate').innerText = order.date || '';
-      document.getElementById('orderModalCustomer').innerText = order.customerName || 'عميل نقدي';
-      document.getElementById('orderModalPhone').innerText = order.phone || 'غير محدد';
-      document.getElementById('orderModalAddress').innerText = order.address || 'استلام من الصيدلية';
-
-      // زر واتساب السريع
-      const cleanPhone = String(order.phone || '').replace(/[^0-9]/g, '');
-      const waContainer = document.getElementById('orderModalWhatsAppBtn');
-      if (cleanPhone) {
-        waContainer.innerHTML = `
-          <a href="https://wa.me/20${cleanPhone}?text=${encodeURIComponent('مرحباً ' + (order.customerName || '') + '، معك صيدلية دكتور جورج عبده بخصوص طلبك رقم ' + order.id)}" target="_blank" class="px-2 py-0.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-md text-[10px] font-bold inline-flex items-center gap-1 transition-colors">
-            <i class="fa-brands fa-whatsapp"></i> واتساب
-          </a>
-        `;
-      } else {
-        waContainer.innerHTML = '';
-      }
-
-      // شارة الحالة
-      const statusBadge = document.getElementById('orderModalStatusBadge');
-      const st = order.status || 'قيد المراجعة';
-      if (st === 'قيد المراجعة') statusBadge.innerHTML = '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold text-[10px]">قيد المراجعة</span>';
-      else if (st === 'جاري التجهيز') statusBadge = '<span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold text-[10px]">جاري التجهيز</span>';
-      else if (st === 'تم التوصيل') statusBadge = '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold text-[10px]">تم التوصيل</span>';
-      else statusBadge.innerHTML = `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-bold text-[10px]">${st}</span>`;
-
-      // القائمة المنسدلة لتغيير الحالة
-      const select = document.getElementById('orderModalStatusSelect');
-      if (select) select.value = st;
-
-      // 2. تعبئة جدول الأصناف والكميات
-      const tbody = document.getElementById('orderModalItemsBody');
-      let itemsList = [];
-      if (Array.isArray(order.items)) {
-        itemsList = order.items.filter(Boolean);
-      } else if (order.items && typeof order.items === 'object') {
-        itemsList = Object.values(order.items).filter(Boolean);
-      }
-
-      if (itemsList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-slate-400">لا توجد تفاصيل أصناف</td></tr>';
-      } else {
-        tbody.innerHTML = itemsList.map(item => {
-          const price = Number(item.price || 0);
-          const qty = Number(item.qty || 1);
-          const itemTotal = (price * qty).toFixed(2);
-          return `
-            <tr class="hover:bg-slate-50 transition-colors">
-              <td class="p-2.5 font-bold text-slate-800">${item.name || 'صنف'}</td>
-              <td class="p-2.5 text-center font-bold text-brand-700 font-mono">×${qty}</td>
-              <td class="p-2.5 text-center text-slate-500 font-mono">${price.toFixed(2)} ج.م</td>
-              <td class="p-2.5 text-left font-black text-slate-900 font-mono">${itemTotal} ج.م</td>
-            </tr>
-          `;
-        }).join('');
-      }
-
-      // 3. عرض ملاحظات وتعليقات العميل
-      const notesEl = document.getElementById('orderModalNotes');
-      if (order.notes && order.notes.trim()) {
-        notesEl.innerText = order.notes.trim();
-      } else {
-        notesEl.innerHTML = '<span class="text-slate-400 italic">لا توجد أي ملاحظات أو تعليقات إضافية من العميل على هذا الطلب.</span>';
-      }
-
-      // 4. الحسابات المالية
-      const delivFee = Number(order.deliveryFee !== undefined ? order.deliveryFee : PharmacyDB.getDeliveryFee());
-      const grandTotal = Number(order.total !== undefined ? order.total : (order.subtotal || 0));
-      document.getElementById('orderModalDeliveryFee').innerText = delivFee === 0 ? 'مجاناً' : `${delivFee.toFixed(2)} ج.م`;
-      document.getElementById('orderModalGrandTotal').innerText = `${grandTotal.toFixed(2)} ج.م`;
-      document.getElementById('orderModalPaymentMethod').innerText = order.paymentMethod || 'كاش عند الاستلام';
-
-      // فتح النافذة
-      document.getElementById('adminOrderDetailModal').classList.remove('hidden');
-    }
-
-    function closeAdminOrderDetailModal() {
-      const modal = document.getElementById('adminOrderDetailModal');
-      if (modal) modal.classList.add('hidden');
-      currentAdminViewingOrderId = null;
-    }
-
-    function updateStatusFromModal() {
-      if (!currentAdminViewingOrderId) return;
-      const newStatus = document.getElementById('orderModalStatusSelect').value;
-      changeOrderStatus(currentAdminViewingOrderId, newStatus);
-      
-      // تحديث الشارة داخل المودال نفسه فوراً
-      const statusBadge = document.getElementById('orderModalStatusBadge');
-      if (newStatus === 'قيد المراجعة') statusBadge.innerHTML = '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold text-[10px]">قيد المراجعة</span>';
-      else if (newStatus === 'جاري التجهيز') statusBadge = '<span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold text-[10px]">جاري التجهيز</span>';
-      else if (newStatus === 'تم التوصيل') statusBadge = '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold text-[10px]">تم التوصيل</span>';
-      else statusBadge.innerHTML = `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-bold text-[10px]">${newStatus}</span>`;
-    }
+  
   </script>
 </body>
 </html>
